@@ -1,0 +1,108 @@
+import { NextRequest, NextResponse } from 'next/server';
+import connectDB from '@/lib/mongodb';
+import Customer from '@/models/Customer';
+
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: NextRequest) {
+    try {
+        await connectDB();
+        
+        const body = await request.json();
+        const {
+            firstName,
+            lastName,
+            email,
+            phone,
+            address,
+            points = 0,
+            status = 'active'
+        } = body;
+
+        // Validate required fields
+        if (!firstName || !lastName || !email) {
+            return NextResponse.json(
+                { message: 'First name, last name, and email are required' },
+                { status: 400 }
+            );
+        }
+
+        // Check if customer with email already exists
+        const existingCustomer = await Customer.findOne({ email });
+        if (existingCustomer) {
+            return NextResponse.json(
+                { message: 'Customer with this email already exists' },
+                { status: 400 }
+            );
+        }
+
+        // Create new customer
+        const customer = await Customer.create({
+            firstName,
+            lastName,
+            email,
+            phone,
+            address,
+            points,
+            status
+        });
+
+        return NextResponse.json({
+            message: 'Customer created successfully',
+            customer
+        });
+
+    } catch (error) {
+        console.error('Add customer error:', error);
+        return NextResponse.json(
+            { message: 'Internal server error', error: error instanceof Error ? error.message : 'Unknown error' },
+            { status: 500 }
+        );
+    }
+}
+
+export async function GET(request: NextRequest) {
+    try {
+        await connectDB();
+        
+        // Get query parameters
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const search = searchParams.get('search') || '';
+
+        // Build query
+        const query = search ? {
+            $or: [
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ]
+        } : {};
+
+        // Execute query with pagination
+        const skip = (page - 1) * limit;
+        const customers = await Customer.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Customer.countDocuments(query);
+
+        return NextResponse.json({
+            customers,
+            pagination: {
+                total,
+                page,
+                limit,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Fetch customers error:', error);
+        return NextResponse.json(
+            { message: 'Internal server error' },
+            { status: 500 }
+        );
+    }
+}
