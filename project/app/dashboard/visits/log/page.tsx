@@ -104,7 +104,7 @@ export default function LogVisitPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {customers.map((customer) => (
-                                        <SelectItem key={customer._id} value={customer._id}>
+                                        <SelectItem key={String(customer._id)} value={String(customer._id)}>
                                             {customer.firstName} {customer.lastName}
                                         </SelectItem>
                                     ))}

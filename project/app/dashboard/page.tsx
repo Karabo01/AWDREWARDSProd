@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarInitials } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Users, 
   Gift, 
@@ -135,7 +135,7 @@ export default function DashboardPage() {
             Welcome back, {user.username}!
           </h2>
           <p className="text-gray-600">
-            Here's what's happening with your rewards program today.
+            Here&apos;s whats&apos;s happening with your rewards program today.
           </p>
         </div>
 

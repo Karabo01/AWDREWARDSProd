@@ -107,7 +107,7 @@ export default function CustomersPage() {
                                     </TableRow>
                                 ) : (
                                     customers.map((customer) => (
-                                        <TableRow key={customer._id}>
+                                        <TableRow key={String(customer._id)}>
                                             <TableCell>
                                                 <div>
                                                     <div className="font-medium">

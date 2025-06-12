@@ -182,7 +182,7 @@ export default function RewardsPage() {
                                     </TableRow>
                                 ) : (
                                     rewards.map((reward) => (
-                                        <TableRow key={reward._id}>
+                                        <TableRow key={String(reward._id)}>
                                             <TableCell>
                                                 <div className="flex items-center space-x-3">
                                                     <Award className="h-5 w-5 text-blue-500" />

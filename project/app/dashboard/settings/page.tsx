@@ -221,7 +221,10 @@ export default function SettingsPage() {
                                             value={settings.theme?.primaryColor || '#2563eb'}
                                             onChange={(e) => setSettings({
                                                 ...settings,
-                                                theme: { ...settings.theme, primaryColor: e.target.value }
+                                                theme: {
+                                                    primaryColor: e.target.value,
+                                                    secondaryColor: settings.theme?.secondaryColor ?? '#f59e0b'
+                                                }
                                             })}
                                         />
                                     </div>
@@ -237,7 +240,10 @@ export default function SettingsPage() {
                                             value={settings.theme?.secondaryColor || '#f59e0b'}
                                             onChange={(e) => setSettings({
                                                 ...settings,
-                                                theme: { ...settings.theme, secondaryColor: e.target.value }
+                                                theme: {
+                                                    primaryColor: settings.theme?.primaryColor ?? '#2563eb',
+                                                    secondaryColor: e.target.value
+                                                }
                                             })}
                                         />
                                     </div>
