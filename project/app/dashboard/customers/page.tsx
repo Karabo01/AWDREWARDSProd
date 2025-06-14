@@ -275,7 +275,7 @@ export default function CustomersPage() {
                                         <SelectItem
                                             key={String(reward._id)}
                                             value={String(reward._id)}
-                                            disabled={selectedCustomer && reward.pointsRequired > selectedCustomer.points}
+                                            disabled={!!selectedCustomer && reward.pointsRequired > selectedCustomer.points}
                                         >
                                             {reward.name} ({reward.pointsRequired} points)
                                         </SelectItem>
