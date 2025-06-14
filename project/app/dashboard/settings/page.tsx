@@ -157,7 +157,7 @@ export default function SettingsPage() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="pointsPerDollar">Points per Dollar</Label>
+                                    <Label htmlFor="pointsPerDollar">Points per Rand</Label>
                                     <div className="flex">
                                         <DollarSign className="w-4 h-4 text-gray-500 mr-2 mt-3" />
                                         <Input
@@ -172,9 +172,8 @@ export default function SettingsPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="minimumPurchase">Minimum Purchase Amount ($)</Label>
+                                    <Label htmlFor="minimumPurchase">Minimum Purchase Amount (R)</Label>
                                     <div className="flex">
-                                        <DollarSign className="w-4 h-4 text-gray-500 mr-2 mt-3" />
                                         <Input
                                             id="minimumPurchase"
                                             type="number"

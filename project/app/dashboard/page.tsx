@@ -31,16 +31,30 @@ interface DashboardStats {
   totalVisits: number;
   pointsRedeemed: number;
   revenue: number;
+  recentActivity: Array<{
+    customerId: string;
+    customerName: string;
+    action: string;
+    points?: number;
+    timestamp: string;
+  }>;
+}
+
+function formatRelativeTime(timestamp: string) {
+  const now = new Date();
+  const date = new Date(timestamp);
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000); // diff in seconds
+
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+  return date.toLocaleDateString();
 }
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalCustomers: 0,
-    totalVisits: 0,
-    pointsRedeemed: 0,
-    revenue: 0,
-  });
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -51,26 +65,31 @@ export default function DashboardPage() {
       return;
     }
 
-    // For now, we'll use mock data since we haven't implemented the full API yet
-    // In a real implementation, you'd verify the token and fetch user data
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setUser(payload);
-      
-      // Mock stats - in real implementation, fetch from API
-      setStats({
-        totalCustomers: 247,
-        totalVisits: 1,
-        pointsRedeemed: 3420,
-        revenue: 15680,
-      });
-    } catch (error) {
-      toast.error('Invalid session. Please log in again.');
-      localStorage.removeItem('token');
-      router.push('/auth/login');
-    } finally {
-      setIsLoading(false);
-    }
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch('/api/reports/dashboard', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch dashboard data');
+        
+        const data = await response.json();
+        setStats(data);
+
+        // Decode user from token
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUser(payload);
+      } catch (error) {
+        toast.error('Failed to load dashboard data');
+        console.error('Dashboard data error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, [router]);
 
   const handleLogout = () => {
@@ -96,38 +115,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <Gift className="h-8 w-8 text-blue-600" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">AWD Rewards</h1>
-                <p className="text-sm text-gray-600">Dashboard</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user.username}</p>
-                <Badge variant="secondary" className="text-xs">
-                  {user.role.replace('_', ' ').toUpperCase()}
-                </Badge>
-              </div>
-              <Avatar>
-                <AvatarFallback>
-                  {user.username.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <Button variant="outline" onClick={handleLogout}>
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
@@ -147,10 +134,7 @@ export default function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCustomers}</div>
-              <p className="text-xs text-muted-foreground">
-                +12% from last month
-              </p>
+              <div className="text-2xl font-bold">{stats?.totalCustomers || 0}</div>
             </CardContent>
           </Card>
 
@@ -160,10 +144,7 @@ export default function DashboardPage() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalVisits.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                +8% from last month
-              </p>
+              <div className="text-2xl font-bold">{stats?.totalVisits?.toLocaleString() || 0}</div>
             </CardContent>
           </Card>
 
@@ -173,10 +154,7 @@ export default function DashboardPage() {
               <Gift className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pointsRedeemed.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                +23% from last month
-              </p>
+              <div className="text-2xl font-bold">{stats?.pointsRedeemed?.toLocaleString() || 0}</div>
             </CardContent>
           </Card>
 
@@ -186,10 +164,7 @@ export default function DashboardPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.revenue.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                +15% from last month
-              </p>
+              <div className="text-2xl font-bold">R{stats?.revenue?.toLocaleString() || 0}</div>
             </CardContent>
           </Card>
         </div>
@@ -271,56 +246,27 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      John Doe
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Earned 10 points
-                    </p>
+                {stats?.recentActivity?.map((activity, index) => (
+                  <div key={index} className="flex items-center space-x-4">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {activity.customerName.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {activity.customerName}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {activity.action}
+                        {activity.points ? ` (${activity.points} points)` : ''}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {formatRelativeTime(activity.timestamp)}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    2m ago
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>JS</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      Jane Smith
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Redeemed reward
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    5m ago
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>MB</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      Mike Brown
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      New customer signup
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    10m ago
-                  </Badge>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>

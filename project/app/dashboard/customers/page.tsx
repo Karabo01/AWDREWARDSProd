@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Label } from "@/components/ui/label";
 import {
     Table,
     TableBody,
@@ -15,6 +16,15 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, Plus, Phone, Mail } from 'lucide-react';
 import { ICustomer } from '@/models/Customer';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from 'sonner';
 
 export default function CustomersPage() {
     const router = useRouter();
@@ -23,6 +33,11 @@ export default function CustomersPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [showRedeemDialog, setShowRedeemDialog] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<ICustomer | null>(null);
+    const [selectedReward, setSelectedReward] = useState<string>('');
+    const [rewards, setRewards] = useState<any[]>([]);
+    const [isRedeeming, setIsRedeeming] = useState(false);
 
     const fetchCustomers = async (page: number, search: string = '') => {
         try {
@@ -46,13 +61,54 @@ export default function CustomersPage() {
         }
     };
 
+    const fetchRewards = async () => {
+        try {
+            const response = await fetch('/api/rewards');
+            const data = await response.json();
+            setRewards(data.rewards);
+        } catch (error) {
+            console.error('Failed to fetch rewards:', error);
+        }
+    };
+
     useEffect(() => {
         fetchCustomers(currentPage, searchTerm);
+        fetchRewards();
     }, [currentPage, searchTerm]);
 
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(event.target.value);
         setCurrentPage(1);
+    };
+
+    const handleRedeemReward = async () => {
+        if (!selectedCustomer || !selectedReward) return;
+
+        setIsRedeeming(true);
+        try {
+            const response = await fetch('/api/rewards/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerId: selectedCustomer._id,
+                    rewardId: selectedReward
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                toast.success('Reward redeemed successfully');
+                setShowRedeemDialog(false);
+                fetchCustomers(currentPage, searchTerm); // Refresh customer list
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error('Failed to redeem reward');
+        } finally {
+            setIsRedeeming(false);
+        }
     };
 
     return (
@@ -140,13 +196,25 @@ export default function CustomersPage() {
                                                 </span>
                                             </TableCell>
                                             <TableCell>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => router.push(`/dashboard/customers/${customer._id}`)}
-                                                >
-                                                    View
-                                                </Button>
+                                                <div className="flex space-x-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => router.push(`/dashboard/customers/${customer._id}`)}
+                                                    >
+                                                        View
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedCustomer(customer);
+                                                            setShowRedeemDialog(true);
+                                                        }}
+                                                    >
+                                                        Redeem
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -180,6 +248,59 @@ export default function CustomersPage() {
                     )}
                 </CardContent>
             </Card>
+
+            <Dialog open={showRedeemDialog} onOpenChange={setShowRedeemDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Redeem Reward</DialogTitle>
+                        <DialogDescription>
+                            {selectedCustomer && (
+                                <p>Available Points: {selectedCustomer.points}</p>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>Select Reward</Label>
+                            <Select
+                                value={selectedReward}
+                                onValueChange={setSelectedReward}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Choose a reward" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {rewards.map((reward) => (
+                                        <SelectItem
+                                            key={String(reward._id)}
+                                            value={String(reward._id)}
+                                            disabled={selectedCustomer && reward.pointsRequired > selectedCustomer.points}
+                                        >
+                                            {reward.name} ({reward.pointsRequired} points)
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                        <div className="flex justify-end space-x-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowRedeemDialog(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleRedeemReward}
+                                disabled={!selectedReward || isRedeeming}
+                            >
+                                {isRedeeming ? 'Redeeming...' : 'Redeem'}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

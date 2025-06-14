@@ -66,7 +66,7 @@ export default function LogVisitPage() {
                     title: 'Success',
                     description: 'Visit logged successfully',
                 });
-                router.push('/dashboard/visits');
+                router.push('/dashboard/customers'); // Changed from '/dashboard/visits' to '/dashboard/customers'
             } else {
                 toast({
                     title: 'Error',
@@ -113,20 +113,22 @@ export default function LogVisitPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="amount">Amount ($)</Label>
-                            <Input
-                                id="amount"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={formData.amount}
-                                onChange={(e) => setFormData({ 
-                                    ...formData, 
-                                    amount: parseFloat(e.target.value),
-                                    points: Math.floor(parseFloat(e.target.value))
-                                })}
-                                required
-                            />
+                            <Label htmlFor="amount">Amount (R)</Label>
+                            <div className="flex">
+                                <Input
+                                    id="amount"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={formData.amount}
+                                    onChange={(e) => setFormData({ 
+                                        ...formData, 
+                                        amount: parseFloat(e.target.value),
+                                        points: Math.floor(parseFloat(e.target.value))
+                                    })}
+                                    required
+                                />
+                            </div>
                         </div>
 
                         <div className="space-y-2">

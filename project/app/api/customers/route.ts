@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokenData } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Customer from '@/models/Customer';
 
@@ -8,6 +9,25 @@ export async function POST(request: NextRequest) {
     try {
         await connectDB();
         
+        // Get token from authorization header
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        const token = authHeader.split(' ')[1];
+        const tokenData = getTokenData(token);
+        
+        if (!tokenData || !tokenData.tenantId) {
+            return NextResponse.json(
+                { message: 'Invalid token' },
+                { status: 401 }
+            );
+        }
+
         const body = await request.json();
         const {
             firstName,
@@ -27,8 +47,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check if customer with email already exists
-        const existingCustomer = await Customer.findOne({ email });
+        // Check if customer with email already exists for this tenant
+        const existingCustomer = await Customer.findOne({ 
+            email,
+            tenantId: tokenData.tenantId
+        });
+        
         if (existingCustomer) {
             return NextResponse.json(
                 { message: 'Customer with this email already exists' },
@@ -36,8 +60,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Create new customer
+        // Create new customer with tenant ID
         const customer = await Customer.create({
+            tenantId: tokenData.tenantId,
             firstName,
             lastName,
             email,

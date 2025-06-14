@@ -13,107 +13,102 @@ export async function GET(request: NextRequest) {
         // Get total customers
         const totalCustomers = await Customer.countDocuments({ status: 'active' });
 
-        // Get total points across all customers
-        const customersAggregate = await Customer.aggregate([
+        // Get total visits and revenue
+        const visitsStats = await Visit.aggregate([
             {
                 $group: {
                     _id: null,
-                    totalPoints: { $sum: '$points' }
+                    totalVisits: { $sum: 1 },
+                    revenue: { $sum: '$amount' },
                 }
             }
         ]);
-        const totalPoints = customersAggregate[0]?.totalPoints || 0;
 
-        // Get active rewards count
-        const totalRewards = await Reward.countDocuments({ status: 'active' });
-
-        // Calculate average transaction amount
-        const visitsAggregate = await Visit.aggregate([
+        // Get total points redeemed
+        const pointsStats = await Reward.aggregate([
             {
                 $group: {
                     _id: null,
-                    averageSpend: { $avg: '$amount' }
+                    pointsRedeemed: { $sum: '$redemptionCount' }
                 }
-            }
-        ]);
-        const averageSpend = visitsAggregate[0]?.averageSpend || 0;
-
-        // Get visits by day for the last 7 days
-        const visitsByDay = await Visit.aggregate([
-            {
-                $match: {
-                    visitDate: {
-                        $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$visitDate' } },
-                    visits: { $sum: 1 }
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    date: '$_id',
-                    visits: 1
-                }
-            },
-            {
-                $sort: { date: 1 }
             }
         ]);
 
-        // Get points by month for the last 6 months
-        const pointsByMonth = await Visit.aggregate([
+        // Get recent activity
+        const recentActivity = await Visit.aggregate([
             {
-                $match: {
-                    visitDate: {
-                        $gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000)
-                    }
+                $sort: { visitDate: -1 }
+            },
+            {
+                $limit: 5
+            },
+            {
+                $lookup: {
+                    from: 'customers',
+                    localField: 'customerId',
+                    foreignField: '_id',
+                    as: 'customer'
                 }
             },
             {
-                $group: {
-                    _id: {
-                        year: { $year: '$visitDate' },
-                        month: { $month: '$visitDate' }
-                    },
-                    points: { $sum: '$points' }
-                }
+                $unwind: '$customer'
             },
             {
                 $project: {
-                    _id: 0,
-                    month: {
-                        $concat: [
-                            { $toString: '$_id.year' },
-                            '-',
-                            {
-                                $cond: {
-                                    if: { $lt: ['$_id.month', 10] },
-                                    then: { $concat: ['0', { $toString: '$_id.month' }] },
-                                    else: { $toString: '$_id.month' }
-                                }
-                            }
-                        ]
+                    customerId: 1,
+                    customerName: {
+                        $concat: ['$customer.firstName', ' ', '$customer.lastName']
                     },
-                    points: 1
+                    action: 'Earned points',
+                    points: 1,
+                    timestamp: '$visitDate'
+                }
+            }
+        ]);
+
+        // Combine redemption activity
+        const recentRedemptions = await Reward.aggregate([
+            {
+                $sort: { updatedAt: -1 }
+            },
+            {
+                $limit: 5
+            },
+            {
+                $lookup: {
+                    from: 'customers',
+                    localField: 'customerId',
+                    foreignField: '_id',
+                    as: 'customer'
                 }
             },
             {
-                $sort: { month: 1 }
+                $unwind: '$customer'
+            },
+            {
+                $project: {
+                    customerId: 1,
+                    customerName: {
+                        $concat: ['$customer.firstName', ' ', '$customer.lastName']
+                    },
+                    action: 'Redeemed reward',
+                    points: '$pointsRequired',
+                    timestamp: '$updatedAt'
+                }
             }
         ]);
+
+        // Merge and sort all recent activity
+        const allActivity = [...recentActivity, ...recentRedemptions]
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 5);
 
         return NextResponse.json({
             totalCustomers,
-            totalPoints,
-            totalRewards,
-            averageSpend,
-            visitsByDay,
-            pointsByMonth
+            totalVisits: visitsStats[0]?.totalVisits || 0,
+            revenue: visitsStats[0]?.revenue || 0,
+            pointsRedeemed: pointsStats[0]?.pointsRedeemed || 0,
+            recentActivity: allActivity
         });
     } catch (error) {
         console.error('Dashboard data error:', error);

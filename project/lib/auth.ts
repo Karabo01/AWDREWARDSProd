@@ -98,3 +98,20 @@ export function verifyToken(token: string): User | null {
     return null;
   }
 }
+
+interface TokenData {
+  userId: string;
+  tenantId: string;
+  username: string;
+  role: string;
+}
+
+export function getTokenData(token: string): TokenData | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload;
+  } catch (error) {
+    console.error('Invalid token:', error);
+    return null;
+  }
+}
