@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     LineChart,
@@ -27,6 +28,7 @@ interface DashboardData {
 export default function ReportsPage() {
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         fetchDashboardData();
@@ -34,10 +36,27 @@ export default function ReportsPage() {
 
     const fetchDashboardData = async () => {
         try {
-            const response = await fetch('/api/reports/dashboard');
+            const token = localStorage.getItem('token');
+            if (!token) {
+                router.push('/auth/login');
+                return;
+            }
+
+            const response = await fetch('/api/reports/dashboard', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
             const jsonData = await response.json();
             if (response.ok) {
-                setData(jsonData);
+                setData({
+                    totalCustomers: jsonData.totalCustomers || 0,
+                    totalPoints: jsonData.totalPoints || 0,
+                    totalRewards: jsonData.totalRewards || 0,
+                    averageSpend: jsonData.revenue ? jsonData.revenue / jsonData.totalVisits : 0,
+                    visitsByDay: jsonData.visitsByDay || [],
+                    pointsByMonth: jsonData.pointsByMonth || []
+                });
             }
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
