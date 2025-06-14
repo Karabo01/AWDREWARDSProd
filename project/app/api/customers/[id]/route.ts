@@ -10,7 +10,28 @@ export async function GET(
     try {
         await connectDB();
 
-        const customer = await Customer.findById(params.id);
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        const token = authHeader.split(' ')[1];
+        const tokenData = getTokenData(token);
+        if (!tokenData?.tenantId) {
+            return NextResponse.json(
+                { message: 'Invalid token' },
+                { status: 401 }
+            );
+        }
+
+        const customer = await Customer.findOne({
+            _id: params.id,
+            tenantId: tokenData.tenantId,
+        });
+
         if (!customer) {
             return NextResponse.json(
                 { message: 'Customer not found' },
@@ -36,9 +57,18 @@ export async function PUT(
         await connectDB();
 
         const authHeader = request.headers.get('authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (!authHeader?.startsWith('Bearer ')) {
             return NextResponse.json(
                 { message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        const token = authHeader.split(' ')[1];
+        const tokenData = getTokenData(token);
+        if (!tokenData?.tenantId) {
+            return NextResponse.json(
+                { message: 'Invalid token' },
                 { status: 401 }
             );
         }
@@ -54,8 +84,11 @@ export async function PUT(
             );
         }
 
-        const customer = await Customer.findByIdAndUpdate(
-            params.id,
+        const customer = await Customer.findOneAndUpdate(
+            {
+                _id: params.id,
+                tenantId: tokenData.tenantId,
+            },
             { firstName, lastName, email, phone, address },
             { new: true }
         );
@@ -67,9 +100,9 @@ export async function PUT(
             );
         }
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             message: 'Customer updated successfully',
-            customer 
+            customer,
         });
     } catch (error) {
         console.error('Update customer error:', error);

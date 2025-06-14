@@ -90,22 +90,35 @@ export async function GET(request: NextRequest) {
     try {
         await connectDB();
         
-        // Get query parameters
+        // Get token from authorization header
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const tokenData = getTokenData(token);
+        if (!tokenData?.tenantId) {
+            return NextResponse.json({ message: 'Invalid token' }, { status: 401 });
+        }
+
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '10');
         const search = searchParams.get('search') || '';
 
-        // Build query
-        const query = search ? {
-            $or: [
-                { firstName: { $regex: search, $options: 'i' } },
-                { lastName: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } }
-            ]
-        } : {};
+        // Add tenantId to query
+        const query = {
+            tenantId: tokenData.tenantId,
+            ...(search ? {
+                $or: [
+                    { firstName: { $regex: search, $options: 'i' } },
+                    { lastName: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } }
+                ]
+            } : {})
+        };
 
-        // Execute query with pagination
         const skip = (page - 1) * limit;
         const customers = await Customer.find(query)
             .sort({ createdAt: -1 })
