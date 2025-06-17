@@ -42,14 +42,15 @@ export function MainNav() {
   return (
     <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
+        <div className="flex justify-between items-center py-3 md:py-4">
           <div className="flex items-center space-x-2">
-            <Gift className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-amber-600 bg-clip-text text-transparent">
+            <Gift className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
+            <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-amber-600 bg-clip-text text-transparent">
               AWD Rewards
             </span>
           </div>
-          <div className="flex items-center space-x-4">
+          
+          <div className="hidden md:flex items-center space-x-4">
             {!isLoggedIn ? (
               <>
                 <Link href="/auth/login">
@@ -91,6 +92,31 @@ export function MainNav() {
                   </Button>
                 </div>
               </>
+            )}
+          </div>
+
+          {/* Mobile Menu */}
+          <div className="md:hidden flex items-center">
+            {isLoggedIn ? (
+              <div className="flex items-center space-x-2">
+                <Link href="/dashboard">
+                  <Button variant="ghost" size="sm">Dashboard</Button>
+                </Link>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    localStorage.removeItem('token');
+                    window.location.href = '/';
+                  }}
+                >
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <Link href="/auth/login">
+                <Button size="sm" variant="ghost">Sign In</Button>
+              </Link>
             )}
           </div>
         </div>
