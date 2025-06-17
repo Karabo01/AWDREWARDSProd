@@ -33,13 +33,29 @@ export default function LogVisitPage() {
         // Fetch customers for dropdown
         const fetchCustomers = async () => {
             try {
-                const response = await fetch('/api/customers');
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/customers', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
                 const data = await response.json();
                 if (response.ok) {
                     setCustomers(data.customers);
+                } else {
+                    toast({
+                        title: 'Error',
+                        description: data.message || 'Failed to fetch customers',
+                        variant: 'destructive',
+                    });
                 }
             } catch (error) {
                 console.error('Failed to fetch customers:', error);
+                toast({
+                    title: 'Error',
+                    description: 'Failed to load customers',
+                    variant: 'destructive',
+                });
             }
         };
 
@@ -51,10 +67,12 @@ export default function LogVisitPage() {
         setIsLoading(true);
 
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch('/api/visits', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(formData),
             });

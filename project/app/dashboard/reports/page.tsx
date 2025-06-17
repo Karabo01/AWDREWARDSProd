@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -26,15 +26,18 @@ interface DashboardData {
 }
 
 export default function ReportsPage() {
-    const [data, setData] = useState<DashboardData | null>(null);
+    const [data, setData] = useState<DashboardData>({
+        totalCustomers: 0,
+        totalPoints: 0,
+        totalRewards: 0,
+        averageSpend: 0,
+        visitsByDay: [],
+        pointsByMonth: []
+    });
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
-
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
@@ -63,7 +66,11 @@ export default function ReportsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
 
     if (loading) {
         return <div className="flex justify-center items-center h-96">Loading...</div>;

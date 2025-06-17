@@ -35,7 +35,7 @@ interface DashboardStats {
     customerId: string;
     customerName: string;
     action: string;
-    points?: number;
+    points: number;
     timestamp: string;
   }>;
 }
@@ -259,7 +259,6 @@ export default function DashboardPage() {
                       </p>
                       <p className="text-sm text-gray-500">
                         {activity.action}
-                        {activity.points ? ` (${activity.points} points)` : ''}
                       </p>
                     </div>
                     <Badge variant="outline" className="text-xs">

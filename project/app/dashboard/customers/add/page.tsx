@@ -28,9 +28,33 @@ export default function AddCustomerPage() {
     });
 
     useEffect(() => {
-        // Redirect if not logged in
         const token = localStorage.getItem('token');
         if (!token) {
+            toast({
+                title: "Error",
+                description: "Please login to continue",
+                variant: "destructive",
+            });
+            router.push('/auth/login');
+            return;
+        }
+        // Check token validity
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (!payload.tenantId) {
+                toast({
+                    title: "Error",
+                    description: "Invalid session",
+                    variant: "destructive",
+                });
+                router.push('/auth/login');
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Invalid session",
+                variant: "destructive",
+            });
             router.push('/auth/login');
         }
     }, [router]);

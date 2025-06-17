@@ -9,6 +9,10 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
+  employeeId?: string;
+  position?: string;
+  department?: string;
+  reportTo?: string;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -45,6 +49,19 @@ const UserSchema = new Schema<IUser>({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  employeeId: {
+    type: String,
+    sparse: true,
+  },
+  position: {
+    type: String,
+  },
+  department: {
+    type: String,
+  },
+  reportTo: {
+    type: String,
   },
 }, {
   timestamps: true,

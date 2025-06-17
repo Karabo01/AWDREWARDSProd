@@ -41,21 +41,29 @@ export default function CustomersPage() {
 
     const fetchCustomers = async (page: number, search: string = '') => {
         try {
+            const token = localStorage.getItem('token');
             const params = new URLSearchParams({
                 page: page.toString(),
                 limit: '10',
                 ...(search && { search }),
             });
 
-            const response = await fetch(`/api/customers?${params}`);
+            const response = await fetch(`/api/customers?${params}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            });
             const data = await response.json();
 
             if (response.ok) {
                 setCustomers(data.customers);
                 setTotalPages(data.pagination.pages);
+            } else {
+                toast.error(data.message || 'Failed to fetch customers');
             }
         } catch (error) {
             console.error('Failed to fetch customers:', error);
+            toast.error('Failed to load customers');
         } finally {
             setLoading(false);
         }

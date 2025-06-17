@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Add tenant filtering to all queries
-        const [totalCustomers, visitsStats, dailyVisits, monthlyPoints] = await Promise.all([
+        const [totalCustomers, visitsStats, dailyVisits, monthlyPoints, recentActivity] = await Promise.all([
             Customer.countDocuments({ 
                 tenantId: tokenData.tenantId,
                 status: 'active' 
@@ -73,6 +73,45 @@ export async function GET(request: NextRequest) {
                 {
                     $sort: { "_id": 1 }
                 }
+            ]),
+            Visit.aggregate([
+                {
+                    $match: { tenantId: tokenData.tenantId }
+                },
+                {
+                    $sort: { visitDate: -1 }
+                },
+                {
+                    $limit: 5
+                },
+                {
+                    $lookup: {
+                        from: 'customers',
+                        localField: 'customerId',
+                        foreignField: '_id',
+                        as: 'customer'
+                    }
+                },
+                {
+                    $unwind: '$customer'
+                },
+                {
+                    $project: {
+                        customerId: 1,
+                        customerName: { 
+                            $concat: ['$customer.firstName', ' ', '$customer.lastName'] 
+                        },
+                        action: { 
+                            $concat: [
+                                'Visited and earned ',
+                                { $toString: '$points' },
+                                ' points'
+                            ]
+                        },
+                        points: '$points',
+                        timestamp: '$visitDate'
+                    }
+                }
             ])
         ]);
 
@@ -88,7 +127,8 @@ export async function GET(request: NextRequest) {
             pointsByMonth: monthlyPoints.map(month => ({
                 month: month._id,
                 points: month.points
-            }))
+            })),
+            recentActivity,
         });
 
     } catch (error) {
