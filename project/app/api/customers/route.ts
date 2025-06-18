@@ -35,27 +35,28 @@ export async function POST(request: NextRequest) {
             email,
             phone,
             address,
+            password,
             points = 0,
             status = 'active'
         } = body;
 
         // Validate required fields
-        if (!firstName || !lastName || !email) {
+        if (!firstName || !lastName || !email || !phone) {
             return NextResponse.json(
-                { message: 'First name, last name, and email are required' },
+                { message: 'First name, last name, email, and phone are required' },
                 { status: 400 }
             );
         }
 
-        // Check if customer with email already exists for this tenant
-        const existingCustomer = await Customer.findOne({ 
-            email,
-            tenantId: tokenData.tenantId
+        // Check if customer with email or phone already exists for this tenant
+        const existingCustomer = await Customer.findOne({
+            tenantId: tokenData.tenantId,
+            $or: [{ email }, { phone }]
         });
-        
+
         if (existingCustomer) {
             return NextResponse.json(
-                { message: 'Customer with this email already exists' },
+                { message: 'Customer with this email or phone number already exists' },
                 { status: 400 }
             );
         }
@@ -69,18 +70,25 @@ export async function POST(request: NextRequest) {
             phone,
             address,
             points,
-            status
+            status,
+            password: password || '0000', // Default password if not provided
+            passwordChanged: false,
+            phoneConfirmed: false
         });
+
+        // Remove password from response
+        const customerResponse = customer.toObject();
+        delete customerResponse.password;
 
         return NextResponse.json({
             message: 'Customer created successfully',
-            customer
+            customer: customerResponse
         });
 
     } catch (error) {
         console.error('Add customer error:', error);
         return NextResponse.json(
-            { message: 'Internal server error', error: error instanceof Error ? error.message : 'Unknown error' },
+            { message: 'Internal server error' },
             { status: 500 }
         );
     }

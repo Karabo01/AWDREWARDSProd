@@ -24,7 +24,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile menu button */}
+      {/* Mobile menu button - only visible on mobile */}
       <div className="md:hidden fixed top-16 left-4 z-50">
         <Button
           variant="outline"
@@ -35,14 +35,14 @@ export default function DashboardLayout({
         </Button>
       </div>
 
-      {/* Sidebar */}
+      {/* Mobile Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-40 w-64 bg-white border-r transform
-        md:translate-x-0 md:static md:inset-auto md:flex
+        md:hidden
         transition-transform duration-200 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="h-full p-4 pt-20 md:pt-4">
+        <div className="h-full p-4 pt-20">
           <nav className="space-y-2">
             {navItems.map((item) => (
               <Link
@@ -65,13 +65,13 @@ export default function DashboardLayout({
       </div>
 
       {/* Main content */}
-      <div className="md:ml-64 min-h-screen">
+      <div className="min-h-screen">
         <main className="py-4">
           {children}
         </main>
       </div>
 
-      {/* Backdrop */}
+      {/* Mobile Backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/20 z-30 md:hidden"

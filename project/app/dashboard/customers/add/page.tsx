@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ interface CustomerFormData {
     lastName: string;
     email: string;
     phone: string;
+    phoneConfirmation: string;
     address: string;
 }
 
@@ -24,6 +25,7 @@ export default function AddCustomerPage() {
         lastName: '',
         email: '',
         phone: '',
+        phoneConfirmation: '',
         address: '',
     });
 
@@ -61,6 +63,16 @@ export default function AddCustomerPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (formData.phone !== formData.phoneConfirmation) {
+            toast({
+                title: "Error",
+                description: "Phone numbers do not match",
+                variant: "destructive",
+            });
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -71,7 +83,10 @@ export default function AddCustomerPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                    ...formData,
+                    password: '0000', // Set default password
+                }),
             });
 
             const data = await response.json();
@@ -105,6 +120,10 @@ export default function AddCustomerPage() {
             <Card className="max-w-2xl mx-auto">
                 <CardHeader>
                     <CardTitle>Add New Customer</CardTitle>
+                    <CardDescription>
+                        Customer will use their phone number and temporary password (0000) to login.
+                        They will be required to change password on first login.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -140,14 +159,30 @@ export default function AddCustomerPage() {
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">Phone</Label>
-                            <Input
-                                id="phone"
-                                type="tel"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Phone Number</Label>
+                                <Input
+                                    id="phone"
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    required
+                                    placeholder="(555) 123-4567"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="phoneConfirmation">Confirm Phone Number</Label>
+                                <Input
+                                    id="phoneConfirmation"
+                                    type="tel"
+                                    value={formData.phoneConfirmation}
+                                    onChange={(e) => setFormData({ ...formData, phoneConfirmation: e.target.value })}
+                                    required
+                                    placeholder="(555) 123-4567"
+                                />
+                            </div>
                         </div>
 
                         <div className="space-y-2">

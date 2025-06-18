@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { hashPassword } from '@/lib/auth';
 
 export interface ICustomer extends Document {
   tenantId: string;
@@ -6,6 +7,9 @@ export interface ICustomer extends Document {
   lastName: string;
   email: string;
   phone: string;
+  phoneConfirmed: boolean;
+  password: string;
+  passwordChanged: boolean;
   address?: string;
   points: number;
   status: 'active' | 'inactive';
@@ -40,7 +44,20 @@ const CustomerSchema = new Schema<ICustomer>({
   },
   phone: {
     type: String,
+    required: true, // Changed to required
     trim: true,
+  },
+  phoneConfirmed: {
+    type: Boolean,
+    default: false,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  passwordChanged: {
+    type: Boolean,
+    default: false,
   },
   address: {
     type: String,
@@ -63,6 +80,14 @@ const CustomerSchema = new Schema<ICustomer>({
 CustomerSchema.index({ tenantId: 1, email: 1 }, { unique: true });
 CustomerSchema.index({ tenantId: 1, phone: 1 });
 CustomerSchema.index({ tenantId: 1, points: -1 });
+
+// Add pre-save middleware to hash password if modified
+CustomerSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    this.password = await hashPassword(this.password);
+  }
+  next();
+});
 
 const Customer = mongoose.models.Customer || mongoose.model<ICustomer>('Customer', CustomerSchema);
 
