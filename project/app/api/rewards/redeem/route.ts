@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Customer from '@/models/Customer';
 import Reward from '@/models/Reward';
+import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
@@ -14,7 +15,6 @@ export async function POST(request: NextRequest) {
         session.startTransaction();
 
         try {
-            // Find customer and reward
             const [customer, reward] = await Promise.all([
                 Customer.findById(customerId),
                 Reward.findById(rewardId)
@@ -24,16 +24,15 @@ export async function POST(request: NextRequest) {
                 throw new Error('Customer or reward not found');
             }
 
-            // Check if customer has enough points
             if (customer.points < reward.pointsRequired) {
                 throw new Error('Insufficient points');
             }
 
             // Update customer points
-            await Customer.findByIdAndUpdate(
+            const updatedCustomer = await Customer.findByIdAndUpdate(
                 customerId,
                 { $inc: { points: -reward.pointsRequired } },
-                { session }
+                { session, new: true }
             );
 
             // Increment reward redemption count
@@ -43,20 +42,29 @@ export async function POST(request: NextRequest) {
                 { session }
             );
 
+            // Create transaction record
+            await Transaction.create([{
+                tenantId: customer.tenantId,
+                customerId,
+                type: 'REWARD_REDEEMED',
+                points: -reward.pointsRequired,
+                rewardId,
+                description: `Redeemed reward: ${reward.name}`,
+                balance: updatedCustomer!.points
+            }], { session });
+
             await session.commitTransaction();
 
             return NextResponse.json({
                 message: 'Reward redeemed successfully',
-                remainingPoints: customer.points - reward.pointsRequired
+                remainingPoints: updatedCustomer!.points
             });
-
         } catch (error) {
             await session.abortTransaction();
             throw error;
         } finally {
             session.endSession();
         }
-
     } catch (error) {
         console.error('Reward redemption error:', error);
         return NextResponse.json(

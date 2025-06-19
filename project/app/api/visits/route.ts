@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Visit from '@/models/Visit';
 import Customer from '@/models/Customer';
+import Transaction from '@/models/Transaction';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -40,17 +41,28 @@ export async function POST(request: NextRequest) {
                 tenantId: customer.tenantId,
                 customerId,
                 amount,
-                points: points || Math.floor(amount), // Default 1 point per dollar
+                points: points || Math.floor(amount),
                 notes,
                 visitDate: new Date(),
             }], { session });
 
             // Update customer points
-            await Customer.findByIdAndUpdate(
+            const updatedCustomer = await Customer.findByIdAndUpdate(
                 customerId,
                 { $inc: { points: points || Math.floor(amount) } },
-                { session }
+                { session, new: true }
             );
+
+            // Create transaction record
+            await Transaction.create([{
+                tenantId: customer.tenantId,
+                customerId,
+                type: 'POINTS_EARNED',
+                points: points || Math.floor(amount),
+                visitId: visit[0]._id,
+                description: `Earned points from visit - $${amount.toFixed(2)} spent`,
+                balance: updatedCustomer!.points
+            }], { session });
 
             await session.commitTransaction();
             
