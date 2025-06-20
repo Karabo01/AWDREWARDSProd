@@ -5,7 +5,7 @@ export interface ITransaction extends Document {
     customerId: string;
     type: string;
     points: number;
-    rewardId: string;
+    rewardId?: string; // Made optional
     description: string;
     balance: number;
     createdAt?: Date;
@@ -18,7 +18,7 @@ const TransactionSchema: Schema<ITransaction> = new Schema(
         customerId: { type: String, required: true },
         type: { type: String, required: true },
         points: { type: Number, required: true },
-        rewardId: { type: String, required: true },
+        rewardId: { type: String, required: false }, // Made not required
         description: { type: String, required: true },
         balance: { type: Number, required: true }
     },

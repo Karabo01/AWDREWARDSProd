@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
                 customerId,
                 type: 'POINTS_EARNED',
                 points: points || Math.floor(amount),
-                visitId: visit[0]._id,
                 description: `Earned points from visit - $${amount.toFixed(2)} spent`,
                 balance: updatedCustomer!.points
             }], { session });
