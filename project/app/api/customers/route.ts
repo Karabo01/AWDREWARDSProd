@@ -56,11 +56,12 @@ export async function POST(request: NextRequest) {
 
         if (existingCustomer) {
             return NextResponse.json(
-                { message: 'Customer with this email or phone number already exists' },
+                { message: 'Customer with this email or phone number already exists in this tenant' },
                 { status: 400 }
             );
         }
 
+        // Allow same email/phone in other tenants: do NOT block if found in other tenants
         // Create new customer with tenant ID
         const customer = await Customer.create({
             tenantId: tokenData.tenantId,
