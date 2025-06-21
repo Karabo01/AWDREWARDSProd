@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ITransaction extends Document {
-    tenantId: string[]; // Changed from string to string[]
+    tenantId: string; // Changed from string[] to string
     customerId: string;
     type: string;
     points: number;
@@ -14,7 +14,7 @@ export interface ITransaction extends Document {
 
 const TransactionSchema: Schema<ITransaction> = new Schema(
     {
-        tenantId: { type: [String], required: true }, // Changed from String to [String]
+        tenantId: { type: String, required: true }, // Changed from [String] to String
         customerId: { type: String, required: true },
         type: { type: String, required: true },
         points: { type: Number, required: true },
