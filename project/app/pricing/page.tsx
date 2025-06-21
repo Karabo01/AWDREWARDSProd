@@ -17,7 +17,7 @@ export default function PricingPage() {
     {
       name: "Basic",
       description: "Perfect for small businesses starting their rewards program",
-      price: "R250",
+      price: "R799",
       period: "per month",
       features: [
         "Up to 10 employees",
@@ -34,7 +34,7 @@ export default function PricingPage() {
     {
       name: "Premium",
       description: "Best for growing businesses with more rewards needs",
-      price: "R450",
+      price: "R1200",
       period: "per month",
       features: [
         "Up to 35 employees",

@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IVisit extends Document {
-  tenantId: string;
+  tenantId: string[]; // Change to array
   customerId: Schema.Types.ObjectId;
   visitDate: Date;
   amount: number;
@@ -13,7 +13,7 @@ export interface IVisit extends Document {
 
 const VisitSchema = new Schema<IVisit>({
   tenantId: {
-    type: String,
+    type: [String], // Change to array
     required: true,
     index: true,
   },

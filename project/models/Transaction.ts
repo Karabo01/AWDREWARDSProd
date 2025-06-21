@@ -1,11 +1,11 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ITransaction extends Document {
-    tenantId: string;
+    tenantId: string[]; // Changed from string to string[]
     customerId: string;
     type: string;
     points: number;
-    rewardId?: string; // Made optional
+    rewardId?: string;
     description: string;
     balance: number;
     createdAt?: Date;
@@ -14,11 +14,11 @@ export interface ITransaction extends Document {
 
 const TransactionSchema: Schema<ITransaction> = new Schema(
     {
-        tenantId: { type: String, required: true },
+        tenantId: { type: [String], required: true }, // Changed from String to [String]
         customerId: { type: String, required: true },
         type: { type: String, required: true },
         points: { type: Number, required: true },
-        rewardId: { type: String, required: false }, // Made not required
+        rewardId: { type: String, required: false },
         description: { type: String, required: true },
         balance: { type: Number, required: true }
     },

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         try {
             // Create visit
             const visit = await Visit.create([{
-                tenantId: customer.tenantId,
+                tenantId: Array.isArray(customer.tenantId) ? customer.tenantId[0] : customer.tenantId, // Use the first tenantId
                 customerId,
                 amount,
                 points: points || Math.floor(amount),
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
             // Create transaction record
             await Transaction.create([{
-                tenantId: customer.tenantId,
+                tenantId: customer.tenantId, // Always pass the array
                 customerId,
                 type: 'POINTS_EARNED',
                 points: points || Math.floor(amount),

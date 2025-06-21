@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
             // Create transaction record
             await Transaction.create([{
-                tenantId: customer.tenantId,
+                tenantId: customer.tenantId, // Always pass the array
                 customerId,
                 type: 'REWARD_REDEEMED',
                 points: -reward.pointsRequired,

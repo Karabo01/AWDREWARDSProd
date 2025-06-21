@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 import { hashPassword } from '@/lib/auth';
 
 export interface ICustomer extends Document {
-  tenantId: string;
+  tenantId: string[]; // Changed from string to string[]
   firstName: string;
   lastName: string;
   email: string;
@@ -19,7 +19,7 @@ export interface ICustomer extends Document {
 
 const CustomerSchema = new Schema<ICustomer>({
   tenantId: {
-    type: String,
+    type: [String], // Changed from String to [String]
     required: true,
     index: true,
   },
@@ -40,7 +40,7 @@ const CustomerSchema = new Schema<ICustomer>({
     required: true,
     trim: true,
     lowercase: true,
-    unique: true,
+    // unique: true, // DO NOT add unique here! Uniqueness is enforced per tenant via compound index below.
   },
   phone: {
     type: String,
@@ -77,7 +77,7 @@ const CustomerSchema = new Schema<ICustomer>({
 });
 
 // Compound indexes for efficient queries
-CustomerSchema.index({ tenantId: 1, email: 1 }, { unique: true });
+CustomerSchema.index({ tenantId: 1, email: 1 }, { unique: true }); // This index will need to be updated in your DB, see note below
 CustomerSchema.index({ tenantId: 1, phone: 1 });
 CustomerSchema.index({ tenantId: 1, points: -1 });
 

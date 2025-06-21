@@ -48,23 +48,29 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check if customer with email or phone already exists for this tenant
-        const existingCustomer = await Customer.findOne({
-            tenantId: tokenData.tenantId,
+        // Check if customer with email or phone exists in any tenant
+        let customer = await Customer.findOne({
             $or: [{ email }, { phone }]
         });
 
-        if (existingCustomer) {
-            return NextResponse.json(
-                { message: 'Customer with this email or phone number already exists in this tenant' },
-                { status: 400 }
-            );
+        if (customer) {
+            // Add tenantId to array if not already present
+            if (!customer.tenantId.includes(tokenData.tenantId)) {
+                customer.tenantId.push(tokenData.tenantId);
+                await customer.save();
+            }
+            // Remove password from response
+            const customerResponse = customer.toObject();
+            delete customerResponse.password;
+            return NextResponse.json({
+                message: 'Customer added to new tenant successfully',
+                customer: customerResponse
+            });
         }
 
-        // Allow same email/phone in other tenants: do NOT block if found in other tenants
-        // Create new customer with tenant ID
-        const customer = await Customer.create({
-            tenantId: tokenData.tenantId,
+        // Create new customer with tenantId as array
+        customer = await Customer.create({
+            tenantId: [tokenData.tenantId],
             firstName,
             lastName,
             email,
