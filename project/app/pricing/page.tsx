@@ -42,7 +42,6 @@ export default function PricingPage() {
         "Priority support",
         "Custom rewards",
         "Detailed reports",
-        "API access",
         "Email + Phone support",
       ],
       button: {

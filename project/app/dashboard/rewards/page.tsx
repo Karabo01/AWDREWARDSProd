@@ -21,6 +21,9 @@ import { Input } from '@/components/ui/input';
 import { Plus, Gift, Award } from 'lucide-react';
 import { IReward } from '@/models/Reward';
 import { toast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function RewardsPage() {
     const [rewards, setRewards] = useState<IReward[]>([]);
@@ -31,6 +34,8 @@ export default function RewardsPage() {
         description: '',
         pointsRequired: 0,
     });
+    const [accessError, setAccessError] = useState(false);
+    const router = useRouter();
 
     const fetchRewards = async () => {
         try {
@@ -53,6 +58,25 @@ export default function RewardsPage() {
     };
 
     useEffect(() => {
+        // Check for business_owner role
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setAccessError(true);
+            router.push('/auth/login');
+            return;
+        }
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.role !== 'business_owner') {
+                setAccessError(true);
+                setTimeout(() => router.push('/dashboard'), 2000);
+                return;
+            }
+        } catch {
+            setAccessError(true);
+            router.push('/auth/login');
+            return;
+        }
         fetchRewards();
     }, []);
 
@@ -95,6 +119,20 @@ export default function RewardsPage() {
             });
         }
     };
+
+    if (accessError) {
+        return (
+            <div className="container mx-auto p-6 flex items-center justify-center h-[50vh]">
+                <Alert variant="destructive" className="max-w-md">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Access Denied</AlertTitle>
+                    <AlertDescription>
+                        Only business owners can access the rewards page. Redirecting...
+                    </AlertDescription>
+                </Alert>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto p-6 space-y-6">
