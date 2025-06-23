@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Customer from '@/models/Customer';
 import Visit from '@/models/Visit';
+import Transaction from '@/models/Transaction';
 import { getTokenData } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -17,12 +18,73 @@ export async function GET(request: NextRequest) {
 
         const token = authHeader.split(' ')[1];
         const tokenData = getTokenData(token);
-        if (!tokenData?.tenantId) {
+        if (!tokenData?.tenantId || !tokenData?.userId) {
             return NextResponse.json({ message: 'Invalid token' }, { status: 401 });
         }
 
-        // Add tenant filtering to all queries
-        const [totalCustomers, visitsStats, dailyVisits, monthlyPoints, recentActivity] = await Promise.all([
+        // Get recent visits (last 5)
+        const recentVisits = await Visit.aggregate([
+            {
+                $match: { tenantId: tokenData.tenantId }
+            },
+            { $sort: { visitDate: -1 } },
+            { $limit: 5 },
+            {
+                $lookup: {
+                    from: 'customers',
+                    localField: 'customerId',
+                    foreignField: '_id',
+                    as: 'customer'
+                }
+            },
+            { $unwind: '$customer' },
+            {
+                $project: {
+                    customerId: 1,
+                    customerName: { $concat: ['$customer.firstName', ' ', '$customer.lastName'] },
+                    action: { $concat: ['Visited and earned ', { $toString: '$points' }, ' points'] },
+                    points: '$points',
+                    timestamp: '$visitDate'
+                }
+            }
+        ]);
+
+        // Get recent reward redemptions (last 5)
+        const recentRedemptions = await Transaction.aggregate([
+            {
+                $match: {
+                    tenantId: tokenData.tenantId,
+                    type: 'REWARD_REDEEMED'
+                }
+            },
+            { $sort: { createdAt: -1 } },
+            { $limit: 5 },
+            {
+                $lookup: {
+                    from: 'customers',
+                    localField: 'customerId',
+                    foreignField: '_id',
+                    as: 'customer'
+                }
+            },
+            { $unwind: '$customer' },
+            {
+                $project: {
+                    customerId: 1,
+                    customerName: { $concat: ['$customer.firstName', ' ', '$customer.lastName'] },
+                    action: { $concat: ['Redeemed a reward (', { $ifNull: ['$rewardName', '$rewardId'] }, ')'] },
+                    points: '$points',
+                    timestamp: '$createdAt'
+                }
+            }
+        ]);
+
+        // Merge and sort by timestamp (desc), limit to 5
+        const mergedActivity = [...recentVisits, ...recentRedemptions]
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 5);
+
+        const [totalCustomers, visitsStats, dailyVisits, monthlyPoints] = await Promise.all([
             Customer.countDocuments({ 
                 tenantId: tokenData.tenantId,
                 status: 'active' 
@@ -73,45 +135,6 @@ export async function GET(request: NextRequest) {
                 {
                     $sort: { "_id": 1 }
                 }
-            ]),
-            Visit.aggregate([
-                {
-                    $match: { tenantId: tokenData.tenantId }
-                },
-                {
-                    $sort: { visitDate: -1 }
-                },
-                {
-                    $limit: 5
-                },
-                {
-                    $lookup: {
-                        from: 'customers',
-                        localField: 'customerId',
-                        foreignField: '_id',
-                        as: 'customer'
-                    }
-                },
-                {
-                    $unwind: '$customer'
-                },
-                {
-                    $project: {
-                        customerId: 1,
-                        customerName: { 
-                            $concat: ['$customer.firstName', ' ', '$customer.lastName'] 
-                        },
-                        action: { 
-                            $concat: [
-                                'Visited and earned ',
-                                { $toString: '$points' },
-                                ' points'
-                            ]
-                        },
-                        points: '$points',
-                        timestamp: '$visitDate'
-                    }
-                }
             ])
         ]);
 
@@ -128,7 +151,7 @@ export async function GET(request: NextRequest) {
                 month: month._id,
                 points: month.points
             })),
-            recentActivity,
+            recentActivity: mergedActivity,
         });
 
     } catch (error) {

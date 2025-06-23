@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 import { hashPassword } from '@/lib/auth';
 
 export interface ICustomer extends Document {
-  tenantId: string[]; // Changed from string to string[]
+  tenantId: string[];
   firstName: string;
   lastName: string;
   email: string;
@@ -11,7 +11,7 @@ export interface ICustomer extends Document {
   password: string;
   passwordChanged: boolean;
   address?: string;
-  points: number;
+  pointsByTenant: { [tenantId: string]: number };
   status: 'active' | 'inactive';
   createdAt: Date;
   updatedAt: Date;
@@ -63,9 +63,10 @@ const CustomerSchema = new Schema<ICustomer>({
     type: String,
     trim: true,
   },
-  points: {
-    type: Number,
-    default: 0,
+  pointsByTenant: {
+    type: Map,
+    of: Number,
+    default: {},
   },
   status: {
     type: String,
