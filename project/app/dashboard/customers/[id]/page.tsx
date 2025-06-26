@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ICustomer } from '@/models/Customer';
 import { toast } from 'sonner';
+import Visit from '@/models/Visit'; // (for type only, not used directly)
+import Transaction from '@/models/Transaction'; // (for type only, not used directly)
 
 export default function CustomerPage({ params }: { params: { id: string } }) {
     const router = useRouter();
@@ -22,6 +24,11 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
         phone: '',
         address: '',
     });
+    const [tenantId, setTenantId] = useState<string | null>(null);
+    const [visitHistory, setVisitHistory] = useState<any[]>([]);
+    const [rewardsHistory, setRewardsHistory] = useState<any[]>([]);
+    const [loadingVisits, setLoadingVisits] = useState(true);
+    const [loadingRewards, setLoadingRewards] = useState(true);
 
     useEffect(() => {
         const fetchCustomer = async () => {
@@ -54,6 +61,56 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
         };
 
         fetchCustomer();
+
+        // Get tenantId from token
+        const token = localStorage.getItem('token');
+        let tid: string | null = null;
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                tid = payload.tenantId;
+                setTenantId(tid);
+            } catch {}
+        }
+
+        // Fetch visit history
+        const fetchVisits = async () => {
+            if (!tid) return;
+            setLoadingVisits(true);
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/visits?customerId=${params.id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                setVisitHistory(data.visits || []);
+            } catch {
+                setVisitHistory([]);
+            } finally {
+                setLoadingVisits(false);
+            }
+        };
+
+        // Fetch rewards history (transactions of type REWARD_REDEEMED)
+        const fetchRewards = async () => {
+            if (!tid) return;
+            setLoadingRewards(true);
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/transactions?customerId=${params.id}&type=REWARD_REDEEMED`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                setRewardsHistory(data.transactions || []);
+            } catch {
+                setRewardsHistory([]);
+            } finally {
+                setLoadingRewards(false);
+            }
+        };
+
+        fetchVisits();
+        fetchRewards();
     }, [params.id]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -190,7 +247,11 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <Label>Points Balance</Label>
-                                            <p className="text-2xl font-bold">{customer.points}</p>
+                                            <p className="text-2xl font-bold">
+                                                {tenantId && customer.pointsByTenant
+                                                    ? customer.pointsByTenant[tenantId] || 0
+                                                    : 0}
+                                            </p>
                                         </div>
                                         <div>
                                             <Label>Status</Label>
@@ -237,8 +298,34 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
                             <CardTitle>Visit History</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {/* Visit history will be implemented later */}
-                            <p className="text-muted-foreground">Visit history coming soon</p>
+                            {loadingVisits ? (
+                                <p className="text-muted-foreground">Loading visit history...</p>
+                            ) : visitHistory.length === 0 ? (
+                                <p className="text-muted-foreground">No visits found</p>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full text-sm">
+                                        <thead>
+                                            <tr>
+                                                <th className="px-2 py-1 text-left">Date</th>
+                                                <th className="px-2 py-1 text-left">Amount</th>
+                                                <th className="px-2 py-1 text-left">Points</th>
+                                                <th className="px-2 py-1 text-left">Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {visitHistory.map((visit) => (
+                                                <tr key={visit._id}>
+                                                    <td className="px-2 py-1">{new Date(visit.visitDate).toLocaleString()}</td>
+                                                    <td className="px-2 py-1">R{visit.amount?.toFixed(2)}</td>
+                                                    <td className="px-2 py-1">{visit.points}</td>
+                                                    <td className="px-2 py-1">{visit.notes || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -249,8 +336,34 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
                             <CardTitle>Rewards History</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {/* Rewards history will be implemented later */}
-                            <p className="text-muted-foreground">Rewards history coming soon</p>
+                            {loadingRewards ? (
+                                <p className="text-muted-foreground">Loading rewards history...</p>
+                            ) : rewardsHistory.length === 0 ? (
+                                <p className="text-muted-foreground">No rewards redeemed</p>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full text-sm">
+                                        <thead>
+                                            <tr>
+                                                <th className="px-2 py-1 text-left">Date</th>
+                                                <th className="px-2 py-1 text-left">Reward</th>
+                                                <th className="px-2 py-1 text-left">Points Used</th>
+                                                <th className="px-2 py-1 text-left">Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {rewardsHistory.map((tx) => (
+                                                <tr key={tx._id}>
+                                                    <td className="px-2 py-1">{new Date(tx.createdAt).toLocaleString()}</td>
+                                                    <td className="px-2 py-1">{tx.rewardName || tx.rewardId || '-'}</td>
+                                                    <td className="px-2 py-1">{tx.points}</td>
+                                                    <td className="px-2 py-1">{tx.description}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
