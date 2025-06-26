@@ -64,7 +64,7 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
 
         // Get tenantId from token
         const token = localStorage.getItem('token');
-        let tid = null;
+        let tid: string | null = null;
         if (token) {
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
