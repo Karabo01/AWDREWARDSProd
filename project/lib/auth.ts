@@ -108,10 +108,15 @@ interface TokenData {
 
 export function getTokenData(token: string): TokenData | null {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload;
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    return {
+      userId: decoded.id, // Note: your generateToken uses 'id', not 'userId'
+      tenantId: decoded.tenantId,
+      username: decoded.username,
+      role: decoded.role
+    };
   } catch (error) {
-    console.error('Invalid token:', error);
+    console.error('Token verification failed:', error);
     return null;
   }
 }
