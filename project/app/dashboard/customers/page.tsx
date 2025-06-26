@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Label } from "@/components/ui/label";
 import {
     Table,
@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 
 export default function CustomersPage() {
     const router = useRouter();
+    const params = useSearchParams();
     const [customers, setCustomers] = useState<ICustomer[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +39,7 @@ export default function CustomersPage() {
     const [selectedReward, setSelectedReward] = useState<string>('');
     const [rewards, setRewards] = useState<any[]>([]);
     const [isRedeeming, setIsRedeeming] = useState(false);
+    const [tenantId, setTenantId] = useState<string | null>(null);
 
     const fetchCustomers = async (page: number, search: string = '') => {
         try {
@@ -80,9 +82,18 @@ export default function CustomersPage() {
     };
 
     useEffect(() => {
+        // Get tenantId from token
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                setTenantId(payload.tenantId);
+            } catch {}
+        }
+
         fetchCustomers(currentPage, searchTerm);
         fetchRewards();
-    }, [currentPage, searchTerm]);
+    }, [currentPage, searchTerm, params.toString()]);
 
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(event.target.value);
@@ -193,7 +204,12 @@ export default function CustomersPage() {
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{customer.points}</TableCell>
+                                            <TableCell>
+                                                {/* Show points for current tenant */}
+                                                {tenantId && customer.pointsByTenant
+                                                    ? customer.pointsByTenant[tenantId] || 0
+                                                    : 0}
+                                            </TableCell>
                                             <TableCell>
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                                     customer.status === 'active' 
@@ -263,7 +279,11 @@ export default function CustomersPage() {
                         <DialogTitle>Redeem Reward</DialogTitle>
                         <DialogDescription>
                             {selectedCustomer && (
-                                <p>Available Points: {selectedCustomer.points}</p>
+                                <p>
+                                    Available Points: {tenantId && selectedCustomer.pointsByTenant
+                                        ? selectedCustomer.pointsByTenant[tenantId] || 0
+                                        : 0}
+                                </p>
                             )}
                         </DialogDescription>
                     </DialogHeader>
@@ -283,7 +303,7 @@ export default function CustomersPage() {
                                         <SelectItem
                                             key={String(reward._id)}
                                             value={String(reward._id)}
-                                            disabled={!!selectedCustomer && reward.pointsRequired > selectedCustomer.points}
+                                            disabled={Boolean(!!selectedCustomer && tenantId && reward.pointsRequired > (selectedCustomer.pointsByTenant?.[tenantId] || 0))}
                                         >
                                             {reward.name} ({reward.pointsRequired} points)
                                         </SelectItem>
@@ -309,6 +329,17 @@ export default function CustomersPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {selectedCustomer && (
+                <div className="mt-6">
+                    <Label>Points Balance</Label>
+                    <p className="text-2xl font-bold">
+                        {tenantId && selectedCustomer.pointsByTenant
+                            ? selectedCustomer.pointsByTenant[tenantId] || 0
+                            : 0}
+                    </p>
+                </div>
+            )}
         </div>
     );
 }
