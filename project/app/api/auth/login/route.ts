@@ -7,7 +7,6 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
-        // Connect to MongoDB first
         await connectDB();
 
         const body = await request.json();
@@ -24,8 +23,7 @@ export async function POST(request: NextRequest) {
         // Find user by username or email
         const user = await User.findOne({
             $or: [{ username }, { email: username }],
-            isActive: true,
-        });
+        }); // REMOVE .lean() here to keep user as a Mongoose document
 
         if (!user) {
             return NextResponse.json(
@@ -34,7 +32,34 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Verify password
+        // Check if user is active (allow if isActive is undefined or true)
+        if (user.isActive === false) {
+            return NextResponse.json(
+                { message: 'Account is deactivated. Please contact support.' },
+                { status: 403 }
+            );
+        }
+
+        // Fetch tenant and check isActive
+        let tenantName = '';
+        let tenantIsActive = true;
+        try {
+            const Tenant = (await import('@/models/Tenant')).default;
+            // Always use string for tenantId
+            const tenant = await Tenant.findById(user.tenantId);
+            tenantName = tenant?.name || '';
+            // If tenant.isActive is undefined, treat as active (true)
+            tenantIsActive = tenant?.isActive !== false;
+        } catch {}
+
+        if (!tenantIsActive) {
+            return NextResponse.json(
+                { message: 'Your business account is deactivated. Please contact support.' },
+                { status: 403 }
+            );
+        }
+
+        // Verify password (use Mongoose doc, not lean/plain object)
         const isPasswordValid = await verifyPassword(password, user.password);
         if (!isPasswordValid) {
             return NextResponse.json(
@@ -43,13 +68,18 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // AWDTECH admin check
+        const isAwdtechAdmin = tenantName.trim().toLowerCase() === 'awdtech' && user.role === 'admin';
+
         // Generate JWT token
         const token = generateToken({
             id: user._id.toString(),
             username: user.username,
             email: user.email,
             tenantId: user.tenantId,
+            tenantName,
             role: user.role,
+            isAwdtechAdmin
         });
 
         return NextResponse.json({
@@ -61,6 +91,8 @@ export async function POST(request: NextRequest) {
                 email: user.email,
                 role: user.role,
                 tenantId: user.tenantId,
+                tenantName,
+                isAwdtechAdmin
             },
         });
     } catch (error) {

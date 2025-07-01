@@ -21,6 +21,7 @@ export default function RegisterPage() {
     businessType: '',
     address: '',
     phone: '',
+    subscriptionPlan: '', // Add subscriptionPlan to state
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -64,6 +65,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!formData.subscriptionPlan) {
+      toast.error('Please select a subscription plan');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -72,7 +78,7 @@ export default function RegisterPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), // subscriptionPlan included
       });
 
       const data = await response.json();
@@ -299,6 +305,24 @@ export default function RegisterPage() {
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     required
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="subscriptionPlan">Subscription Plan</Label>
+                  <Select
+                    value={formData.subscriptionPlan}
+                    onValueChange={(value) => setFormData({ ...formData, subscriptionPlan: value })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">Basic (R799/month)</SelectItem>
+                      <SelectItem value="premium">Premium (R1200/month)</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

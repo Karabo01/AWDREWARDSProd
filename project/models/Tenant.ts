@@ -16,6 +16,9 @@ export interface ITenant extends Document {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  subscriptionPlan: 'basic' | 'premium' | 'custom';
+  paymentStatus: 'pending' | 'paid' | 'overdue';
+  lastPaymentDate: Date;
 }
 
 const TenantSchema = new Schema<ITenant>({
@@ -71,6 +74,19 @@ const TenantSchema = new Schema<ITenant>({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  subscriptionPlan: {
+    type: String,
+    enum: ['basic', 'premium', 'custom'],
+    default: 'basic',
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'overdue'],
+    default: 'pending',
+  },
+  lastPaymentDate: {
+    type: Date,
   },
 }, {
   timestamps: true,

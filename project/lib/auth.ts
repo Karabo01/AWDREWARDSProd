@@ -9,6 +9,8 @@ export interface User {
   email: string;
   tenantId: string;
   role: 'admin' | 'business_owner' | 'employee';
+  // Optionally allow extra fields
+  [key: string]: any;
 }
 
 export interface PasswordComplexityRules {
@@ -84,6 +86,7 @@ export function generateToken(user: User): string {
       email: user.email,
       tenantId: user.tenantId,
       role: user.role,
+      ...(user.isAwdtechAdmin ? { isAwdtechAdmin: true } : {})
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -104,16 +107,20 @@ interface TokenData {
   tenantId: string;
   username: string;
   role: string;
+  isAwdtechAdmin?: boolean;
+  tenantName?: string;
 }
 
 export function getTokenData(token: string): TokenData | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     return {
-      userId: decoded.id, // Note: your generateToken uses 'id', not 'userId'
+      userId: decoded.id,
       tenantId: decoded.tenantId,
       username: decoded.username,
-      role: decoded.role
+      role: decoded.role,
+      isAwdtechAdmin: decoded.isAwdtechAdmin || false,
+      tenantName: decoded.tenantName || undefined
     };
   } catch (error) {
     console.error('Token verification failed:', error);

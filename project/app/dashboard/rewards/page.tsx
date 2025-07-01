@@ -1,251 +1,212 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Gift, Award } from 'lucide-react';
-import { IReward } from '@/models/Reward';
-import { toast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { QrCode, Search, Gift } from 'lucide-react';
+import dynamic from 'next/dynamic';
 
-export default function RewardsPage() {
-    const [rewards, setRewards] = useState<IReward[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [newReward, setNewReward] = useState({
-        name: '',
-        description: '',
-        pointsRequired: 0,
-    });
-    const [accessError, setAccessError] = useState(false);
-    const router = useRouter();
+// Dynamically import react-qr-scanner to avoid SSR issues
+const QrReader = dynamic(() => import('react-qr-scanner'), { ssr: false });
 
+export default function RewardsRedemptionPage() {
+    const [search, setSearch] = useState('');
+    const [customers, setCustomers] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
+    const [showRedeemDialog, setShowRedeemDialog] = useState(false);
+    const [rewards, setRewards] = useState<any[]>([]);
+    const [selectedReward, setSelectedReward] = useState<string>('');
+    const [isRedeeming, setIsRedeeming] = useState(false);
+    const [showQrDialog, setShowQrDialog] = useState(false);
+    const [tenantId, setTenantId] = useState<string | null>(null);
+
+    // Fetch rewards for redemption
     const fetchRewards = async () => {
         try {
-            const response = await fetch('/api/rewards');
-            const data = await response.json();
-            
-            if (response.ok) {
-                setRewards(data.rewards);
-            }
-        } catch (error) {
-            console.error('Failed to fetch rewards:', error);
-            toast({
-                title: 'Error',
-                description: 'Failed to load rewards',
-                variant: 'destructive',
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/rewards', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
             });
+            const data = await response.json();
+            setRewards(data.rewards || []);
+        } catch (error) {
+            toast.error('Failed to fetch rewards');
+        }
+    };
+
+    // Search customers
+    const handleSearch = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const params = new URLSearchParams({
+                search,
+                limit: '10',
+            });
+            const response = await fetch(`/api/customers?${params}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            });
+            const data = await response.json();
+            setCustomers(data.customers || []);
+        } catch (error) {
+            toast.error('Failed to search customers');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        // Check for business_owner role
+        // Get tenantId from token
         const token = localStorage.getItem('token');
-        if (!token) {
-            setAccessError(true);
-            router.push('/auth/login');
-            return;
-        }
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            if (payload.role !== 'business_owner') {
-                setAccessError(true);
-                setTimeout(() => router.push('/dashboard'), 2000);
-                return;
-            }
-        } catch {
-            setAccessError(true);
-            router.push('/auth/login');
-            return;
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                setTenantId(payload.tenantId);
+            } catch {}
         }
         fetchRewards();
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                toast({ title: 'Error', description: 'Please log in again' });
-                return;
+    // QR scan handler
+    const handleQrScan = (result: any) => {
+        if (result && result.text) {
+            try {
+                const data = JSON.parse(result.text);
+                if (data.customerId && data.rewardId) {
+                    const customer = customers.find(c => String(c._id) === data.customerId);
+                    const reward = rewards.find(r => String(r._id) === data.rewardId);
+                    if (!customer) {
+                        toast.error('Customer not found for this QR code');
+                        setShowQrDialog(false);
+                        return;
+                    }
+                    if (!reward) {
+                        toast.error('Reward not found for this QR code');
+                        setShowQrDialog(false);
+                        return;
+                    }
+                    setSelectedCustomer(customer);
+                    setSelectedReward(String(reward._id));
+                    setShowRedeemDialog(true);
+                    setShowQrDialog(false);
+                } else {
+                    toast.error('Invalid QR code format');
+                }
+            } catch {
+                toast.error('Invalid QR code data');
             }
-
-            const response = await fetch('/api/rewards', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(newReward),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                toast({
-                    title: 'Success',
-                    description: 'Reward created successfully',
-                });
-                setShowAddForm(false);
-                setNewReward({ name: '', description: '', pointsRequired: 0 });
-                fetchRewards();
-            } else {
-                throw new Error(data.message);
-            }
-        } catch (error) {
-            toast({
-                title: 'Error',
-                description: 'Failed to create reward',
-                variant: 'destructive',
-            });
         }
     };
 
-    if (accessError) {
-        return (
-            <div className="container mx-auto p-6 flex items-center justify-center h-[50vh]">
-                <Alert variant="destructive" className="max-w-md">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Access Denied</AlertTitle>
-                    <AlertDescription>
-                        Only business owners can access the rewards page. Redirecting...
-                    </AlertDescription>
-                </Alert>
-            </div>
-        );
-    }
+    // Redeem reward for customer
+    const handleRedeemReward = async () => {
+        if (!selectedCustomer || !selectedReward) return;
+        setIsRedeeming(true);
+        try {
+            const response = await fetch('/api/rewards/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerId: selectedCustomer._id,
+                    rewardId: selectedReward
+                }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                toast.success('Reward redeemed successfully');
+                setShowRedeemDialog(false);
+                setSelectedReward('');
+            } else {
+                toast.error(data.message || 'Failed to redeem reward');
+            }
+        } catch (error) {
+            toast.error('Failed to redeem reward');
+        } finally {
+            setIsRedeeming(false);
+        }
+    };
 
     return (
         <div className="container mx-auto p-6 space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold">Rewards Program</h1>
-                <Button onClick={() => setShowAddForm(!showAddForm)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Reward
-                </Button>
-            </div>
-
-            {showAddForm && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Add New Reward</CardTitle>
-                        <CardDescription>Create a new reward for your customers</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                                <label htmlFor="name">Reward Name</label>
-                                <Input
-                                    id="name"
-                                    value={newReward.name}
-                                    onChange={(e) => setNewReward({ ...newReward, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label htmlFor="description">Description</label>
-                                <Input
-                                    id="description"
-                                    value={newReward.description}
-                                    onChange={(e) => setNewReward({ ...newReward, description: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label htmlFor="points">Points Required</label>
-                                <Input
-                                    id="points"
-                                    type="number"
-                                    min="0"
-                                    value={newReward.pointsRequired}
-                                    onChange={(e) => setNewReward({ ...newReward, pointsRequired: parseInt(e.target.value) })}
-                                    required
-                                />
-                            </div>
-                            <div className="flex justify-end space-x-4">
-                                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit">Create Reward</Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
-            )}
-
             <Card>
-                <CardHeader>
-                    <CardTitle>Available Rewards</CardTitle>
-                    <CardDescription>Manage your reward offerings</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Redeem Rewards</CardTitle>
+                    <Button variant="outline" onClick={() => setShowQrDialog(true)}>
+                        <QrCode className="mr-2 h-4 w-4" />
+                        Scan QR
+                    </Button>
                 </CardHeader>
                 <CardContent>
+                    <div className="flex items-center space-x-2 mb-4">
+                        <Input
+                            placeholder="Search customer by name, email, or phone"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+                        />
+                        <Button onClick={handleSearch} disabled={loading}>
+                            <Search className="h-4 w-4 mr-1" />
+                            Search
+                        </Button>
+                    </div>
                     <div className="border rounded-lg">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Reward</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Points Required</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Redemptions</TableHead>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Phone</TableHead>
+                                    <TableHead>Points</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center">
-                                            Loading rewards...
+                                            Loading...
                                         </TableCell>
                                     </TableRow>
-                                ) : rewards.length === 0 ? (
+                                ) : customers.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center">
-                                            <div className="flex flex-col items-center py-8">
-                                                <Gift className="h-12 w-12 text-gray-400 mb-4" />
-                                                <p className="text-gray-500">No rewards available</p>
-                                            </div>
+                                            No customers found
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    rewards.map((reward) => (
-                                        <TableRow key={String(reward._id)}>
+                                    customers.map((customer) => (
+                                        <TableRow key={String(customer._id)}>
                                             <TableCell>
-                                                <div className="flex items-center space-x-3">
-                                                    <Award className="h-5 w-5 text-blue-500" />
-                                                    <span className="font-medium">{reward.name}</span>
-                                                </div>
+                                                {customer.firstName} {customer.lastName}
                                             </TableCell>
-                                            <TableCell>{reward.description}</TableCell>
-                                            <TableCell>{reward.pointsRequired} points</TableCell>
+                                            <TableCell>{customer.email}</TableCell>
+                                            <TableCell>{customer.phone}</TableCell>
                                             <TableCell>
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                    reward.status === 'active' 
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-red-100 text-red-800'
-                                                }`}>
-                                                    {reward.status}
-                                                </span>
+                                                {tenantId && customer.pointsByTenant
+                                                    ? customer.pointsByTenant[tenantId] || 0
+                                                    : 0}
                                             </TableCell>
-                                            <TableCell>{reward.redemptionCount}</TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedCustomer(customer);
+                                                        setShowRedeemDialog(true);
+                                                    }}
+                                                >
+                                                    Redeem
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 )}
@@ -254,6 +215,90 @@ export default function RewardsPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Redeem Reward Dialog */}
+            <Dialog open={showRedeemDialog} onOpenChange={setShowRedeemDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Redeem Reward</DialogTitle>
+                        <DialogDescription>
+                            {selectedCustomer && (
+                                <p>
+                                    {selectedCustomer.firstName} {selectedCustomer.lastName} <br />
+                                    Points: {
+                                        tenantId && selectedCustomer.pointsByTenant
+                                            ? selectedCustomer.pointsByTenant[tenantId] || 0
+                                            : 0
+                                    }
+                                </p>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label>Select Reward</label>
+                            <select
+                                className="block w-full p-2 text-sm border rounded-md"
+                                value={selectedReward}
+                                onChange={e => setSelectedReward(e.target.value)}
+                            >
+                                <option value="">Choose a reward</option>
+                                {rewards.map((reward) => (
+                                    <option
+                                        key={String(reward._id)}
+                                        value={String(reward._id)}
+                                        disabled={
+                                            !!selectedCustomer &&
+                                            !!tenantId &&
+                                            reward.pointsRequired >
+                                                ((selectedCustomer.pointsByTenant &&
+                                                    selectedCustomer.pointsByTenant[tenantId]) || 0)
+                                        }
+                                    >
+                                        {reward.name} ({reward.pointsRequired} points)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowRedeemDialog(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleRedeemReward}
+                                disabled={!selectedReward || isRedeeming}
+                            >
+                                {isRedeeming ? 'Redeeming...' : 'Redeem'}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* QR Scanner Dialog */}
+            <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Scan Customer QR Code</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center">
+                        <div style={{ width: 280, height: 280 }}>
+                            <QrReader
+                                scanDelay={300}
+                                onError={() => toast.error('Camera error')}
+                                onScan={handleQrScan}
+                                style={{ width: '100%', height: '100%' }}
+                            />
+                        </div>
+                        <Button className="mt-4" variant="outline" onClick={() => setShowQrDialog(false)}>
+                            Cancel
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

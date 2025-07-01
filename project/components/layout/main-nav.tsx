@@ -11,6 +11,8 @@ interface UserData {
   username: string;
   email: string;
   role: 'admin' | 'business_owner' | 'employee';
+  tenantId?: string;
+  tenantName?: string;
 }
 
 export function MainNav() {
@@ -18,6 +20,7 @@ export function MainNav() {
   const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('token');
   const isAuthPage = pathname?.startsWith('/auth');
   const [user, setUser] = useState<UserData | null>(null);
+  const [isAwdtechAdmin, setIsAwdtechAdmin] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -28,8 +31,15 @@ export function MainNav() {
           setUser({
             username: payload.username,
             email: payload.email,
-            role: payload.role
+            role: payload.role,
+            tenantId: payload.tenantId,
+            tenantName: payload.tenantName,
           });
+          setIsAwdtechAdmin(
+            payload.role === 'admin' &&
+            typeof payload.tenantName === 'string' &&
+            payload.tenantName.trim().toLowerCase() === 'awdtech'
+          );
         } catch (error) {
           console.error('Error decoding token:', error);
         }
@@ -81,6 +91,12 @@ export function MainNav() {
                       <Button variant="ghost">Settings</Button>
                     </Link>
                   )}
+                  {/* Admin button only for AWDTECH admin */}
+                  {user?.role === 'admin' && (
+                    <Link href="/admin">
+                      <Button variant="ghost" className="text-red-600">Admin</Button>
+                    </Link>
+                  )}
                   <Button 
                     variant="outline"
                     onClick={() => {
@@ -102,6 +118,11 @@ export function MainNav() {
                 <Link href="/dashboard">
                   <Button variant="ghost" size="sm">Dashboard</Button>
                 </Link>
+                {user?.role === 'admin' && (
+                  <Link href="/admin">
+                    <Button variant="ghost" size="sm" className="text-red-600">Admin</Button>
+                  </Link>
+                )}
                 <Button 
                   variant="outline"
                   size="sm"
@@ -124,3 +145,4 @@ export function MainNav() {
     </header>
   );
 }
+

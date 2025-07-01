@@ -73,13 +73,20 @@ export default function CustomersPage() {
 
     const fetchRewards = async () => {
         try {
-            const response = await fetch('/api/rewards');
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/rewards', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            });
             const data = await response.json();
-            setRewards(data.rewards);
+            setRewards(data.rewards || []);
         } catch (error) {
             console.error('Failed to fetch rewards:', error);
         }
     };
+
+    const paramsString = params.toString();
 
     useEffect(() => {
         // Get tenantId from token
@@ -93,7 +100,7 @@ export default function CustomersPage() {
 
         fetchCustomers(currentPage, searchTerm);
         fetchRewards();
-    }, [currentPage, searchTerm, params.toString()]);
+    }, [currentPage, searchTerm, paramsString]);
 
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(event.target.value);

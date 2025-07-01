@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building, DollarSign, Mail, Phone, MapPin, Palette, Plus, AlertCircle } from 'lucide-react';
+import { Building, DollarSign, Mail, Phone, MapPin, Palette, Plus, AlertCircle, Award, Gift } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ISettings } from '@/models/Settings';
 import {
@@ -41,12 +41,54 @@ export default function SettingsPage() {
     const [loadingEmployees, setLoadingEmployees] = useState(true);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [accessError, setAccessError] = useState<boolean>(false);
+    const [rewards, setRewards] = useState<any[]>([]);
+    const [loadingRewards, setLoadingRewards] = useState(true);
+    const [pendingReward, setPendingReward] = useState({ name: '', description: '', pointsRequired: 0 });
     const router = useRouter();
+
+    // Move fetchRewards above useEffect and wrap in useCallback
+    const fetchRewards = useCallback(async () => {
+        setLoadingRewards(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/rewards', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setRewards(data.rewards);
+            } else if (response.status === 401) {
+                toast({
+                    title: 'Session Expired',
+                    description: 'Please log in again.',
+                    variant: 'destructive',
+                });
+                router.push('/auth/login');
+            } else {
+                toast({
+                    title: 'Error',
+                    description: data.message || 'Failed to load rewards',
+                    variant: 'destructive',
+                });
+            }
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: 'Failed to load rewards',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoadingRewards(false);
+        }
+    }, [router]);
 
     useEffect(() => {
         fetchSettings();
         fetchEmployees();
-    }, []);
+        fetchRewards();
+    }, [fetchRewards]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -117,11 +159,15 @@ export default function SettingsPage() {
         }
     };
 
+    // Remove pendingRewards state and use only pendingReward for the input row
+
+    // Remove pendingRewards from handleSubmit, only save settings here
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
 
         try {
+            // Save settings
             const response = await fetch('/api/settings', {
                 method: 'PUT',
                 headers: {
@@ -130,14 +176,14 @@ export default function SettingsPage() {
                 body: JSON.stringify(settings),
             });
 
-            if (response.ok) {
-                toast({
-                    title: 'Success',
-                    description: 'Settings updated successfully',
-                });
-            } else {
+            if (!response.ok) {
                 throw new Error('Failed to update settings');
             }
+
+            toast({
+                title: 'Success',
+                description: 'Settings updated successfully',
+            });
         } catch (error) {
             toast({
                 title: 'Error',
@@ -146,6 +192,62 @@ export default function SettingsPage() {
             });
         } finally {
             setSaving(false);
+        }
+    };
+
+    // Add handler for adding a reward
+    const handleAddReward = async () => {
+        if (
+            !pendingReward.name ||
+            !pendingReward.description ||
+            !pendingReward.pointsRequired ||
+            pendingReward.pointsRequired <= 0
+        ) {
+            toast({
+                title: 'Error',
+                description: 'Please fill all reward fields',
+                variant: 'destructive',
+            });
+            return;
+        }
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/rewards', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(pendingReward),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                toast({
+                    title: 'Success',
+                    description: 'Reward created successfully',
+                });
+                setPendingReward({ name: '', description: '', pointsRequired: 0 });
+                await fetchRewards();
+            } else if (response.status === 401) {
+                toast({
+                    title: 'Session Expired',
+                    description: 'Please log in again.',
+                    variant: 'destructive',
+                });
+                router.push('/auth/login');
+            } else {
+                toast({
+                    title: 'Error',
+                    description: data.message || 'Failed to create reward',
+                    variant: 'destructive',
+                });
+            }
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: 'Failed to create reward',
+                variant: 'destructive',
+            });
         }
     };
 
@@ -212,7 +314,9 @@ export default function SettingsPage() {
                 <Tabs defaultValue="business" className="space-y-6">
                     <TabsList>
                         <TabsTrigger value="business">Business Info</TabsTrigger>
-                        <TabsTrigger value="rewards">Rewards Program</TabsTrigger>
+                        {/* Remove the Rewards tab */}
+                        {/* <TabsTrigger value="rewards">Rewards</TabsTrigger> */}
+                        <TabsTrigger value="rewards-program">Rewards Program</TabsTrigger>
                         <TabsTrigger value="appearance">Appearance</TabsTrigger>
                         <TabsTrigger value="employees">Employees</TabsTrigger>
                     </TabsList>
@@ -278,15 +382,114 @@ export default function SettingsPage() {
                         </Card>
                     </TabsContent>
 
-                    <TabsContent value="rewards">
+                    {/* REMOVE THE REWARDS TAB COMPLETELY */}
+                    {/* <TabsContent value="rewards">
+                        ...existing code...
+                    </TabsContent> */}
+
+                    <TabsContent value="rewards-program">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Rewards Program Settings</CardTitle>
                                 <CardDescription>
-                                    Configure your rewards program parameters
+                                    Configure your rewards program parameters and manage rewards
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="space-y-8">
+                                {/* Rewards creation and list */}
+                                <div>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h3 className="text-lg font-semibold">Rewards Management</h3>
+                                            <p className="text-sm text-gray-500">
+                                                Create and manage your customer rewards
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {/* Add new reward inline, not as a separate form */}
+                                    <div className="mb-4 flex flex-col gap-2">
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder="Reward Name"
+                                                value={pendingReward.name}
+                                                onChange={e => setPendingReward(r => ({ ...r, name: e.target.value }))}
+                                            />
+                                            <Input
+                                                placeholder="Description"
+                                                value={pendingReward.description}
+                                                onChange={e => setPendingReward(r => ({ ...r, description: e.target.value }))}
+                                            />
+                                            <Input
+                                                placeholder="Points Required"
+                                                type="number"
+                                                min="0"
+                                                value={pendingReward.pointsRequired || ''}
+                                                onChange={e => setPendingReward(r => ({ ...r, pointsRequired: parseInt(e.target.value) || 0 }))}
+                                            />
+                                            <Button
+                                                type="button"
+                                                onClick={handleAddReward}
+                                            >
+                                                Add
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="border rounded-lg">
+                                        {/* Only render table after loadingRewards is false */}
+                                        {!loadingRewards && (
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Reward</TableHead>
+                                                        <TableHead>Description</TableHead>
+                                                        <TableHead>Points Required</TableHead>
+                                                        <TableHead>Status</TableHead>
+                                                        <TableHead>Redemptions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {rewards.length === 0 ? (
+                                                        <TableRow>
+                                                            <TableCell colSpan={5} className="text-center">
+                                                                <div className="flex flex-col items-center py-8">
+                                                                    <Gift className="h-12 w-12 text-gray-400 mb-4" />
+                                                                    <p className="text-gray-500">No rewards available</p>
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ) : (
+                                                        rewards.map((reward) => (
+                                                            <TableRow key={String(reward._id)}>
+                                                                <TableCell>
+                                                                    <div className="flex items-center space-x-3">
+                                                                        <Award className="h-5 w-5 text-blue-500" />
+                                                                        <span className="font-medium">{reward.name}</span>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>{reward.description}</TableCell>
+                                                                <TableCell>{reward.pointsRequired} points</TableCell>
+                                                                <TableCell>
+                                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                                        reward.status === 'active' 
+                                                                            ? 'bg-green-100 text-green-800'
+                                                                            : 'bg-red-100 text-red-800'
+                                                                    }`}>
+                                                                        {reward.status}
+                                                                    </span>
+                                                                </TableCell>
+                                                                <TableCell>{reward.redemptionCount}</TableCell>
+                                                            </TableRow>
+                                                        ))
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        )}
+                                        {loadingRewards && (
+                                            <div className="py-8 text-center text-gray-500">Loading rewards...</div>
+                                        )}
+                                    </div>
+                                </div>
+                                {/* ...existing rewards program settings below... */}
                                 <div className="space-y-2">
                                     <Label htmlFor="pointsPerDollar">Points per Rand</Label>
                                     <div className="flex">
@@ -301,7 +504,6 @@ export default function SettingsPage() {
                                         />
                                     </div>
                                 </div>
-
                                 <div className="space-y-2">
                                     <Label htmlFor="minimumPurchase">Minimum Purchase Amount (R)</Label>
                                     <div className="flex">
@@ -314,7 +516,6 @@ export default function SettingsPage() {
                                         />
                                     </div>
                                 </div>
-
                                 <div className="space-y-2">
                                     <Label htmlFor="welcomeBonus">Welcome Bonus Points</Label>
                                     <div className="flex">

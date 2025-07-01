@@ -56,6 +56,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAwdtechAdmin, setIsAwdtechAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -81,6 +82,11 @@ export default function DashboardPage() {
         // Decode user from token
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUser(payload);
+        setIsAwdtechAdmin(
+          payload.role === 'admin' &&
+          typeof payload.tenantId === 'string' &&
+          payload.tenantId.trim().toLowerCase() === 'awdtech'
+        );
       } catch (error) {
         toast.error('Failed to load dashboard data');
         console.error('Dashboard data error:', error);
@@ -124,6 +130,17 @@ export default function DashboardPage() {
           <p className="text-gray-600">
             Here&apos;s whats&apos;s happening with your rewards program today.
           </p>
+          {/* Admin button for AWDTECH admin */}
+          {isAwdtechAdmin && (
+            <div className="mt-4">
+              <Button
+                variant="destructive"
+                onClick={() => router.push('/admin')}
+              >
+                Go to Admin Dashboard
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Stats Grid */}

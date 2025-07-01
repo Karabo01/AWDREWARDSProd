@@ -17,10 +17,11 @@ export async function POST(request: NextRequest) {
       businessType,
       address,
       phone,
+      subscriptionPlan, // Add subscriptionPlan
     } = body;
 
     // Validate required fields
-    if (!username || !email || !password || !businessName || !businessType || !address || !phone) {
+    if (!username || !email || !password || !businessName || !businessType || !address || !phone || !subscriptionPlan) {
       return NextResponse.json(
         { message: 'All fields are required' },
         { status: 400 }
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
       address,
       phone,
       email,
+      subscriptionPlan, // Save subscriptionPlan
     });
 
     await tenant.save();

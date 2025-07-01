@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef } from 'react';
+import emailjs from '@emailjs/browser';
 import { Phone, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,9 +11,31 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { toast } from 'sonner';
 
 export default function ContactPage() {
+  const form = useRef<HTMLFormElement>(null);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast.success('Message sent successfully!');
+    if (!form.current) return;
+
+    emailjs
+      .sendForm(
+        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
+        form.current,
+        {
+          publicKey: process.env.NEXT_PUBLIC_EMAILJS_USER_ID!,
+        }
+      )
+      .then(
+        () => {
+          toast.success('Message sent successfully!');
+          form.current?.reset();
+        },
+        (error) => {
+          toast.error('Failed to send message');
+          console.error('EmailJS error:', error.text);
+        }
+      );
   };
 
   const openWhatsApp = () => {
@@ -84,16 +108,17 @@ export default function ContactPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form ref={form} onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input id="name" placeholder="Your name" required />
+                    <Input id="name" name="user_name" placeholder="Your name" required />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input 
                       id="email" 
+                      name="user_email"
                       type="email" 
                       placeholder="your@email.com" 
                       required 
@@ -104,6 +129,7 @@ export default function ContactPage() {
                     <Label htmlFor="message">Message</Label>
                     <Textarea 
                       id="message" 
+                      name="message"
                       placeholder="How can we help?" 
                       rows={4} 
                       required 

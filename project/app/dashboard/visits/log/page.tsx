@@ -10,6 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { ICustomer } from '@/models/Customer';
+import { QrCode } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface VisitFormData {
     customerId: string;
@@ -17,6 +20,9 @@ interface VisitFormData {
     points?: number;
     notes?: string;
 }
+
+// Dynamically import react-qr-scanner to avoid SSR issues
+const QrReader = dynamic(() => import('react-qr-scanner'), { ssr: false });
 
 export default function LogVisitPage() {
     const router = useRouter();
@@ -28,6 +34,7 @@ export default function LogVisitPage() {
         points: undefined,
         notes: '',
     });
+    const [showQrDialog, setShowQrDialog] = useState(false);
 
     useEffect(() => {
         // Fetch customers for dropdown
@@ -103,11 +110,47 @@ export default function LogVisitPage() {
         }
     };
 
+    // Handle QR scan result
+    const handleQrScan = (result: any) => {
+        if (result && result.text) {
+            // Assume QR code contains customerId
+            const customerId = result.text;
+            const found = customers.find(c => String(c._id) === customerId);
+            if (found) {
+                setFormData((prev) => ({
+                    ...prev,
+                    customerId: customerId,
+                }));
+                toast({
+                    title: 'QR Scan',
+                    description: `Customer "${found.firstName} ${found.lastName}" selected.`,
+                });
+                setShowQrDialog(false);
+            } else {
+                toast({
+                    title: 'QR Scan',
+                    description: 'Customer not found for this QR code.',
+                    variant: 'destructive',
+                });
+            }
+        }
+    };
+
     return (
         <div className="container mx-auto p-6">
             <Card className="max-w-2xl mx-auto">
                 <CardHeader>
-                    <CardTitle>Log Customer Visit</CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Log Customer Visit</CardTitle>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowQrDialog(true)}
+                        >
+                            <QrCode className="mr-2 h-4 w-4" />
+                            Scan QR
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -185,6 +228,27 @@ export default function LogVisitPage() {
                     </form>
                 </CardContent>
             </Card>
+            {/* QR Scanner Dialog */}
+            <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Scan Customer QR Code</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center">
+                        <div style={{ width: 280, height: 280 }}>
+                            <QrReader
+                                scanDelay={300}
+                                onError={() => toast({ title: 'QR Error', description: 'Camera error', variant: 'destructive' })}
+                                onScan={handleQrScan}
+                                style={{ width: '100%', height: '100%' }}
+                            />
+                        </div>
+                        <Button className="mt-4" variant="outline" onClick={() => setShowQrDialog(false)}>
+                            Cancel
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

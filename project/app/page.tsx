@@ -7,6 +7,8 @@ import { Gift, Users, TrendingUp, Shield, Clock, Star } from 'lucide-react';
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50">
+      {/* Hidden admin route for crawlers (not visible to users) */}
+      <a href="/admin" style={{ display: 'none' }}>Admin</a>
       {/* Hero Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
