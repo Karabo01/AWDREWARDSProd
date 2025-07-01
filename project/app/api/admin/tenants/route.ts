@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTokenData } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Tenant from '@/models/Tenant';
-import User from '@/models/User';
 import Customer from '@/models/Customer';
+import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
     try {
@@ -25,61 +25,40 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
-        // Aggregate all tenants with employee and customer counts
-        const tenants = await Tenant.aggregate([
-            {
-                $lookup: {
-                    from: 'users',
-                    let: { tenantId: '$_id' },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: { $eq: ['$tenantId', '$$tenantId'] }
-                            }
-                        },
-                        {
-                            $count: 'count'
-                        }
-                    ],
-                    as: 'employeeCount'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'customers',
-                    let: { tenantId: '$_id' },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: { $in: ['$$tenantId', '$tenantId'] }
-                            }
-                        },
-                        {
-                            $count: 'count'
-                        }
-                    ],
-                    as: 'customerCount'
-                }
-            },
-            {
-                $addFields: {
-                    employeeCount: { $ifNull: [{ $arrayElemAt: ['$employeeCount.count', 0] }, 0] },
-                    customerCount: { $ifNull: [{ $arrayElemAt: ['$customerCount.count', 0] }, 0] }
-                }
-            }
-        ]);
+        // Fetch all tenants
+        const tenants = await Tenant.find({}).lean();
+
+        // For each tenant, fetch employee and customer counts
+        const tenantsWithCounts = await Promise.all(
+            tenants.map(async (tenant: any) => {
+                // Employees: users with tenantId and role 'employee'
+                const employeeCount = await User.countDocuments({
+                    tenantId: tenant._id.toString(),
+                    role: 'employee'
+                });
+                // Customers: customers where tenantId array contains this tenant's id
+                const customerCount = await Customer.countDocuments({
+                    tenantId: tenant._id.toString()
+                });
+                return {
+                    ...tenant,
+                    employeeCount,
+                    customerCount
+                };
+            })
+        );
 
         // Calculate total revenue (based on all tenants)
-        const totalRevenue = tenants.reduce((sum, tenant) => {
+        const totalRevenue = tenantsWithCounts.reduce((sum, tenant) => {
             const planRate = tenant.subscriptionPlan === 'premium' ? 1200 : 799;
             return sum + planRate;
         }, 0);
 
         // Count all tenants
-        const totalTenants = await Tenant.countDocuments({});
+        const totalTenants = tenantsWithCounts.length;
 
         return NextResponse.json({
-            tenants,
+            tenants: tenantsWithCounts,
             totalRevenue,
             totalTenants
         });
@@ -92,3 +71,4 @@ export async function GET(request: NextRequest) {
         );
     }
 }
+         
