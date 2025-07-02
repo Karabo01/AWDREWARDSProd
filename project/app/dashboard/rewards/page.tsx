@@ -77,13 +77,70 @@ export default function RewardsRedemptionPage() {
     }, []);
 
     // QR scan handler
-    const handleQrScan = (result: any) => {
+    const handleQrScan = async (result: any) => {
         if (result && result.text) {
             try {
                 const data = JSON.parse(result.text);
-                if (data.customerId && data.rewardId) {
-                    const customer = customers.find(c => String(c._id) === data.customerId);
-                    const reward = rewards.find(r => String(r._id) === data.rewardId);
+
+                // Handle reward redemption QR (new format: name, rewardId, tenantId, action)
+                if (
+                    data.action === 'REDEEM_REWARD' &&
+                    data.name &&
+                    data.rewardId &&
+                    data.tenantId
+                ) {
+                    // Split name into first and last (best effort)
+                    const [firstName, ...rest] = data.name.trim().split(' ');
+                    const lastName = rest.join(' ');
+
+                    // Try to find customer by name and tenantId
+                    let customer = customers.find(
+                        c =>
+                            c.firstName.trim().toLowerCase() === (firstName || '').toLowerCase() &&
+                            c.lastName.trim().toLowerCase() === (lastName || '').toLowerCase() &&
+                            (Array.isArray(c.tenantId)
+                                ? c.tenantId.includes(data.tenantId)
+                                : c.tenantId === data.tenantId)
+                    );
+                    let reward = rewards.find(r => String(r._id) === data.rewardId);
+
+                    // If not found, fetch from API
+                    if (!customer) {
+                        try {
+                            const token = localStorage.getItem('token');
+                            // Search customers by firstName and lastName
+                            const params = new URLSearchParams({
+                                search: firstName,
+                                limit: '10'
+                            });
+                            const res = await fetch(`/api/customers?${params}`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (res.ok) {
+                                const respData = await res.json();
+                                customer = (respData.customers || []).find(
+                                    (c: any) =>
+                                        c.firstName.trim().toLowerCase() === (firstName || '').toLowerCase() &&
+                                        c.lastName.trim().toLowerCase() === (lastName || '').toLowerCase() &&
+                                        (Array.isArray(c.tenantId)
+                                            ? c.tenantId.includes(data.tenantId)
+                                            : c.tenantId === data.tenantId)
+                                );
+                            }
+                        } catch {}
+                    }
+                    if (!reward) {
+                        try {
+                            const token = localStorage.getItem('token');
+                            const res = await fetch(`/api/rewards/${data.rewardId}`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (res.ok) {
+                                reward = await res.json();
+                            }
+                        } catch {}
+                    }
+
                     if (!customer) {
                         toast.error('Customer not found for this QR code');
                         setShowQrDialog(false);
@@ -98,9 +155,18 @@ export default function RewardsRedemptionPage() {
                     setSelectedReward(String(reward._id));
                     setShowRedeemDialog(true);
                     setShowQrDialog(false);
-                } else {
-                    toast.error('Invalid QR code format');
+                    return;
                 }
+
+                // Handle points earning QR (show info, but not redeem here)
+                if (data.name && data.phone && data.tenantId) {
+                    toast.success(`Customer: ${data.name} (${data.phone})\nTenant: ${data.tenantId}`);
+                    setShowQrDialog(false);
+                    // Optionally, you could redirect or prefill a form for points earning
+                    return;
+                }
+
+                toast.error('Invalid QR code format');
             } catch {
                 toast.error('Invalid QR code data');
             }

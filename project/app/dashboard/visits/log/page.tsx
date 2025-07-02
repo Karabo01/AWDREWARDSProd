@@ -113,23 +113,55 @@ export default function LogVisitPage() {
     // Handle QR scan result
     const handleQrScan = (result: any) => {
         if (result && result.text) {
-            // Assume QR code contains customerId
-            const customerId = result.text;
-            const found = customers.find(c => String(c._id) === customerId);
-            if (found) {
-                setFormData((prev) => ({
-                    ...prev,
-                    customerId: customerId,
-                }));
+            try {
+                const data = JSON.parse(result.text);
+
+                // Handle points earning QR
+                if (data.name && data.phone && data.tenantId) {
+                    // Find customer by phone (or name/tenantId if needed)
+                    const found = customers.find(
+                        c => c.phone === data.phone && c.tenantId.includes(data.tenantId)
+                    );
+                    if (found) {
+                        setFormData((prev) => ({
+                            ...prev,
+                            customerId: String(found._id),
+                        }));
+                        toast({
+                            title: 'QR Scan',
+                            description: `Customer "${found.firstName} ${found.lastName}" selected.`,
+                        });
+                    } else {
+                        toast({
+                            title: 'QR Scan',
+                            description: 'Customer not found for this QR code.',
+                            variant: 'destructive',
+                        });
+                    }
+                    setShowQrDialog(false);
+                    return;
+                }
+
+                // Handle reward redemption QR (not for this page, but show info)
+                if (data.action === 'REDEEM_REWARD' && data.userId && data.rewardId) {
+                    toast({
+                        title: 'QR Scan',
+                        description: 'This QR code is for reward redemption, not points earning.',
+                        variant: 'destructive',
+                    });
+                    setShowQrDialog(false);
+                    return;
+                }
+
                 toast({
                     title: 'QR Scan',
-                    description: `Customer "${found.firstName} ${found.lastName}" selected.`,
+                    description: 'Invalid QR code format.',
+                    variant: 'destructive',
                 });
-                setShowQrDialog(false);
-            } else {
+            } catch {
                 toast({
                     title: 'QR Scan',
-                    description: 'Customer not found for this QR code.',
+                    description: 'Invalid QR code data.',
                     variant: 'destructive',
                 });
             }

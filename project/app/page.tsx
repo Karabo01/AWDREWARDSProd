@@ -55,6 +55,35 @@ export default function HomePage() {
             </p>
           </div>
           
+          {/* Mobile App Promo */}
+          <div className="mb-12 flex flex-col items-center">
+            
+            <p className="text-lg font-semibold text-blue-700">
+              Now available: AWD Rewards Mobile App for Customers!
+            </p>
+            <p className="text-gray-600 mb-2">
+              Your customers can view points, redeem rewards, and track their loyalty on Android and iOS.
+            </p>
+            <div className="flex gap-4 mt-2">
+              <a
+                href="https://play.google.com/store/apps/details?id=com.awdrewards.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block"
+              >
+                <img src="/google-play-badge.png.png" alt="Get it on Google Play" className="h-10" />
+              </a>
+              <a
+                href="https://apps.apple.com/app/id0000000000"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block"
+              >
+                <img src="/apple-store-badge.png.svg" alt="Download on the App Store" className="h-10" />
+              </a>
+            </div>
+          </div>
+          
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
               <CardHeader className="text-center">

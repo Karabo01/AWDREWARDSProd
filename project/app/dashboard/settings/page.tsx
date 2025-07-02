@@ -46,7 +46,48 @@ export default function SettingsPage() {
     const [pendingReward, setPendingReward] = useState({ name: '', description: '', pointsRequired: 0 });
     const router = useRouter();
 
-    // Move fetchRewards above useEffect and wrap in useCallback
+    const fetchSettings = async () => {
+        try {
+            const response = await fetch('/api/settings');
+            const data = await response.json();
+            if (response.ok) {
+                setSettings(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch settings:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to load settings',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchEmployees = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/employees', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setEmployees(data.employees);
+            }
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: 'Failed to load employees',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoadingEmployees(false);
+        }
+    };
+
     const fetchRewards = useCallback(async () => {
         setLoadingRewards(true);
         try {
@@ -108,7 +149,7 @@ export default function SettingsPage() {
                 });
                 setTimeout(() => {
                     router.push('/dashboard');
-                }, 2000); // Redirect after 2 seconds
+                }, 2000);
                 return;
             }
             setUserRole(payload.role);
@@ -117,57 +158,11 @@ export default function SettingsPage() {
         }
     }, [router]);
 
-    const fetchSettings = async () => {
-        try {
-            const response = await fetch('/api/settings');
-            const data = await response.json();
-            if (response.ok) {
-                setSettings(data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch settings:', error);
-            toast({
-                title: 'Error',
-                description: 'Failed to load settings',
-                variant: 'destructive',
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchEmployees = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/employees', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-            const data = await response.json();
-            if (response.ok) {
-                setEmployees(data.employees);
-            }
-        } catch (error) {
-            toast({
-                title: 'Error',
-                description: 'Failed to load employees',
-                variant: 'destructive',
-            });
-        } finally {
-            setLoadingEmployees(false);
-        }
-    };
-
-    // Remove pendingRewards state and use only pendingReward for the input row
-
-    // Remove pendingRewards from handleSubmit, only save settings here
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
 
         try {
-            // Save settings
             const response = await fetch('/api/settings', {
                 method: 'PUT',
                 headers: {
@@ -195,7 +190,6 @@ export default function SettingsPage() {
         }
     };
 
-    // Add handler for adding a reward
     const handleAddReward = async () => {
         if (
             !pendingReward.name ||
@@ -246,6 +240,39 @@ export default function SettingsPage() {
             toast({
                 title: 'Error',
                 description: 'Failed to create reward',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const handleDeleteReward = async (rewardId: string) => {
+        if (!window.confirm('Are you sure you want to delete this reward?')) return;
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/rewards/${rewardId}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            if (response.ok) {
+                toast({
+                    title: 'Success',
+                    description: 'Reward deleted successfully',
+                });
+                await fetchRewards();
+            } else {
+                toast({
+                    title: 'Error',
+                    description: data.message || 'Failed to delete reward',
+                    variant: 'destructive',
+                });
+            }
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: 'Failed to delete reward',
                 variant: 'destructive',
             });
         }
@@ -314,8 +341,6 @@ export default function SettingsPage() {
                 <Tabs defaultValue="business" className="space-y-6">
                     <TabsList>
                         <TabsTrigger value="business">Business Info</TabsTrigger>
-                        {/* Remove the Rewards tab */}
-                        {/* <TabsTrigger value="rewards">Rewards</TabsTrigger> */}
                         <TabsTrigger value="rewards-program">Rewards Program</TabsTrigger>
                         <TabsTrigger value="appearance">Appearance</TabsTrigger>
                         <TabsTrigger value="employees">Employees</TabsTrigger>
@@ -382,11 +407,6 @@ export default function SettingsPage() {
                         </Card>
                     </TabsContent>
 
-                    {/* REMOVE THE REWARDS TAB COMPLETELY */}
-                    {/* <TabsContent value="rewards">
-                        ...existing code...
-                    </TabsContent> */}
-
                     <TabsContent value="rewards-program">
                         <Card>
                             <CardHeader>
@@ -406,7 +426,7 @@ export default function SettingsPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    {/* Add new reward inline, not as a separate form */}
+                                    {/* Add new reward inline */}
                                     <div className="mb-4 flex flex-col gap-2">
                                         <div className="flex gap-2">
                                             <Input
@@ -435,7 +455,6 @@ export default function SettingsPage() {
                                         </div>
                                     </div>
                                     <div className="border rounded-lg">
-                                        {/* Only render table after loadingRewards is false */}
                                         {!loadingRewards && (
                                             <Table>
                                                 <TableHeader>
@@ -445,12 +464,13 @@ export default function SettingsPage() {
                                                         <TableHead>Points Required</TableHead>
                                                         <TableHead>Status</TableHead>
                                                         <TableHead>Redemptions</TableHead>
+                                                        <TableHead>Actions</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                     {rewards.length === 0 ? (
                                                         <TableRow>
-                                                            <TableCell colSpan={5} className="text-center">
+                                                            <TableCell colSpan={6} className="text-center">
                                                                 <div className="flex flex-col items-center py-8">
                                                                     <Gift className="h-12 w-12 text-gray-400 mb-4" />
                                                                     <p className="text-gray-500">No rewards available</p>
@@ -478,6 +498,15 @@ export default function SettingsPage() {
                                                                     </span>
                                                                 </TableCell>
                                                                 <TableCell>{reward.redemptionCount}</TableCell>
+                                                                <TableCell>
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        size="sm"
+                                                                        onClick={() => handleDeleteReward(reward._id)}
+                                                                    >
+                                                                        Delete
+                                                                    </Button>
+                                                                </TableCell>
                                                             </TableRow>
                                                         ))
                                                     )}
@@ -489,7 +518,8 @@ export default function SettingsPage() {
                                         )}
                                     </div>
                                 </div>
-                                {/* ...existing rewards program settings below... */}
+
+                                {/* Rewards program settings */}
                                 <div className="space-y-2">
                                     <Label htmlFor="pointsPerDollar">Points per Rand</Label>
                                     <div className="flex">

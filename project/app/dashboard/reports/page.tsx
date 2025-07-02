@@ -98,7 +98,7 @@ export default function ReportsPage() {
                 />
                 <StatCard
                     title="Avg. Transaction"
-                    value={`$${(data?.averageSpend || 0).toFixed(2)}`}
+                    value={`R${(data?.averageSpend || 0).toFixed(2)}`}
                     icon={<CreditCard className="h-8 w-8 text-purple-600" />}
                 />
             </div>
