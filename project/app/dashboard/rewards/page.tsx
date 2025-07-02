@@ -191,6 +191,7 @@ export default function RewardsRedemptionPage() {
                 toast.success('Reward redeemed successfully');
                 setShowRedeemDialog(false);
                 setSelectedReward('');
+                setSelectedCustomer(null); // <-- Add this line to clear the selected customer
             } else {
                 toast.error(data.message || 'Failed to redeem reward');
             }
