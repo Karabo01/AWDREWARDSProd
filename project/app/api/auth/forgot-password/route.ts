@@ -27,29 +27,42 @@ export async function POST(request: NextRequest) {
         await user.save();
 
         // Prepare Nodemailer transport
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT),
-            secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        let transporter;
+        try {
+            transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST,
+                port: Number(process.env.SMTP_PORT),
+                secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
+                auth: {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS,
+                },
+            });
+            // Verify SMTP connection (will throw if not working)
+            await transporter.verify();
+        } catch (smtpError) {
+            console.error('SMTP connection error:', smtpError);
+            return NextResponse.json({ message: 'Email service unavailable. Please try again later.' }, { status: 500 });
+        }
 
         const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://awdrewards.co.za'}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
-        await transporter.sendMail({
-            from: '"AWD Rewards" <password-reset@awdrewards.co.za>',
-            to: email,
-            subject: 'AWD Rewards Password Reset',
-            html: `
-                <p>Hello,</p>
-                <p>You requested a password reset for your AWD Rewards account.</p>
-                <p><a href="${resetUrl}">Click here to reset your password</a></p>
-                <p>If you did not request this, please ignore this email.</p>
-            `,
-        });
+        try {
+            await transporter.sendMail({
+                from: '"AWD Rewards" <password-reset@awdrewards.co.za>',
+                to: email,
+                subject: 'AWD Rewards Password Reset',
+                html: `
+                    <p>Hello,</p>
+                    <p>You requested a password reset for your AWD Rewards account.</p>
+                    <p><a href="${resetUrl}">Click here to reset your password</a></p>
+                    <p>If you did not request this, please ignore this email.</p>
+                `,
+            });
+        } catch (sendError) {
+            console.error('SendMail error:', sendError);
+            return NextResponse.json({ message: 'Failed to send reset email. Please try again later.' }, { status: 500 });
+        }
 
         return NextResponse.json({ message: 'If the email exists, a reset link will be sent.' });
     } catch (error) {
@@ -57,4 +70,3 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
     }
 }
-   

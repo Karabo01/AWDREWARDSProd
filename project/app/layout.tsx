@@ -8,8 +8,9 @@ import { MainNav } from '@/components/layout/main-nav';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'AWD Rewards - Customer Loyalty Management',
-  description: 'Complete multi-tenant rewards system for restaurants, car washes, and retail businesses',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
