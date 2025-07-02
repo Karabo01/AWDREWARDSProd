@@ -35,6 +35,7 @@ export default function LogVisitPage() {
         notes: '',
     });
     const [showQrDialog, setShowQrDialog] = useState(false);
+    const [user, setUser] = useState<{ username: string } | null>(null);
 
     useEffect(() => {
         // Fetch customers for dropdown
@@ -67,21 +68,43 @@ export default function LogVisitPage() {
         };
 
         fetchCustomers();
+
+        // Get logged in user info from token
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                setUser({ username: payload.username });
+                setFormData((prev) => ({
+                    ...prev,
+                    notes: payload.username // Set notes to username by default
+                }));
+            } catch {}
+        }
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
+        // Always set notes to username before submit
+        const token = localStorage.getItem('token');
+        let username = '';
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                username = payload.username;
+            } catch {}
+        }
+
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch('/api/visits', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({ ...formData, notes: username }),
             });
 
             const data = await response.json();
@@ -235,12 +258,14 @@ export default function LogVisitPage() {
                             />
                         </div>
 
+                        {/* Replace Notes with Processed By */}
                         <div className="space-y-2">
-                            <Label htmlFor="notes">Notes (Optional)</Label>
-                            <Textarea
-                                id="notes"
-                                value={formData.notes}
-                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                            <Label htmlFor="processedBy">Processed By</Label>
+                            <Input
+                                id="processedBy"
+                                value={user?.username || ''}
+                                readOnly
+                                disabled
                             />
                         </div>
 
