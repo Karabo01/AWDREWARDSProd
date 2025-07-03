@@ -33,8 +33,7 @@ export default function ContactPage() {
         process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
         data,
         {
-          publicKey: process.env.NEXT_PUBLIC_EMAILJS_USER_ID!,
-          timeout: 100000, // 100 seconds
+          publicKey: process.env.NEXT_PUBLIC_EMAILJS_USER_ID!
         }
       )
       .then(
