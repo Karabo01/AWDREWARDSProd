@@ -54,10 +54,12 @@ export function MainNav() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-3 md:py-4">
           <div className="flex items-center space-x-2">
-            <Gift className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
-            <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-amber-600 bg-clip-text text-transparent">
-              AWD Rewards
-            </span>
+            <Link href="/" className="flex items-center space-x-2">
+              <Gift className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
+              <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-amber-600 bg-clip-text text-transparent">
+                AWD Rewards
+              </span>
+            </Link>
           </div>
           
           <div className="hidden md:flex items-center space-x-4">

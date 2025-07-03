@@ -17,11 +17,15 @@ export default function ContactPage() {
     e.preventDefault();
     if (!form.current) return;
 
+    // Always send to sales@awdrewards.co.za
+    const formData = new FormData(form.current);
+    formData.set('to_email', 'sales@awdrewards.co.za');
+
     emailjs
-      .sendForm(
+      .send(
         process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
         process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
-        form.current,
+        Object.fromEntries(formData.entries()),
         {
           publicKey: process.env.NEXT_PUBLIC_EMAILJS_USER_ID!,
         }
@@ -135,6 +139,8 @@ export default function ContactPage() {
                       required 
                     />
                   </div>
+
+                  <input type="hidden" name="to_email" value="sales@awdrewards.co.za" />
 
                   <Button type="submit" className="w-full">
                     Send Message
