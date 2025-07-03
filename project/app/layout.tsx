@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   icons: {
-    icon: '/favicon.ico',
+    icon: '/gift.png',
   },
 };
 

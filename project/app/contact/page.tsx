@@ -21,13 +21,20 @@ export default function ContactPage() {
     const formData = new FormData(form.current);
     formData.set('to_email', 'sales@awdrewards.co.za');
 
+    // Convert FormData to a plain object for EmailJS
+    const data: Record<string, string> = {};
+    formData.forEach((value, key) => {
+      data[key] = value.toString();
+    });
+
     emailjs
       .send(
         process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
         process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
-        Object.fromEntries(formData.entries()),
+        data,
         {
           publicKey: process.env.NEXT_PUBLIC_EMAILJS_USER_ID!,
+          timeout: 100000, // 100 seconds
         }
       )
       .then(
@@ -36,8 +43,15 @@ export default function ContactPage() {
           form.current?.reset();
         },
         (error) => {
-          toast.error('Failed to send message');
-          console.error('EmailJS error:', error.text);
+          // Show more specific error for 412 or timeout
+          if (error?.status === 412) {
+            toast.error('EmailJS configuration error (412 Precondition Failed). Please check your EmailJS service/template/user IDs and template fields.');
+          } else if (error?.text && error.text.includes('timeout')) {
+            toast.error('Email sending timed out. Please try again later or contact support.');
+          } else {
+            toast.error('Failed to send message');
+          }
+          console.error('EmailJS error:', error?.text || error);
         }
       );
   };
