@@ -24,6 +24,36 @@ export default function RewardsRedemptionPage() {
     const [isRedeeming, setIsRedeeming] = useState(false);
     const [showQrDialog, setShowQrDialog] = useState(false);
     const [tenantId, setTenantId] = useState<string | null>(null);
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+
+    // Helper function to detect mobile devices
+    const isMobileDevice = () => {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    };
+
+    // Handle camera permission check
+    const handleCameraPermission = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+            // Camera access granted
+            stream.getTracks().forEach(track => track.stop()); // Stop the stream
+            return true;
+        } catch (error) {
+            console.error('Camera permission denied:', error);
+            toast.error('Please allow camera access to scan QR codes.');
+            return false;
+        }
+    };
+
+    // Handle QR button click with permission check
+    const handleQrButtonClick = async () => {
+        const hasPermission = await handleCameraPermission();
+        if (hasPermission) {
+            setShowQrDialog(true);
+        }
+    };
 
     // Fetch rewards for redemption
     const fetchRewards = async () => {
@@ -65,6 +95,11 @@ export default function RewardsRedemptionPage() {
     };
 
     useEffect(() => {
+        // Set back camera as default for mobile devices
+        if (isMobileDevice()) {
+            setFacingMode('environment');
+        }
+
         // Get tenantId from token
         const token = localStorage.getItem('token');
         if (token) {
@@ -207,7 +242,7 @@ export default function RewardsRedemptionPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Redeem Rewards</CardTitle>
-                    <Button variant="outline" onClick={() => setShowQrDialog(true)}>
+                    <Button variant="outline" onClick={handleQrButtonClick}>
                         <QrCode className="mr-2 h-4 w-4" />
                         Scan QR
                     </Button>
@@ -355,14 +390,32 @@ export default function RewardsRedemptionPage() {
                         <div style={{ width: 280, height: 280 }}>
                             <QrReader
                                 scanDelay={300}
-                                onError={() => toast.error('Camera error')}
+                                onError={(error) => {
+                                    console.error('QR Scanner error:', error);
+                                    toast.error('Camera error. Please check camera permissions.');
+                                }}
                                 onScan={handleQrScan}
                                 style={{ width: '100%', height: '100%' }}
+                                constraints={{
+                                    video: {
+                                        facingMode: facingMode,
+                                        width: { ideal: 1280 },
+                                        height: { ideal: 720 },
+                                    }
+                                }}
                             />
                         </div>
-                        <Button className="mt-4" variant="outline" onClick={() => setShowQrDialog(false)}>
-                            Cancel
-                        </Button>
+                        <div className="mt-4 flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => setFacingMode(facingMode === 'environment' ? 'user' : 'environment')}
+                            >
+                                {facingMode === 'environment' ? 'Front Camera' : 'Back Camera'}
+                            </Button>
+                            <Button variant="outline" onClick={() => setShowQrDialog(false)}>
+                                Cancel
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

@@ -36,8 +36,47 @@ export default function LogVisitPage() {
     });
     const [showQrDialog, setShowQrDialog] = useState(false);
     const [user, setUser] = useState<{ username: string } | null>(null);
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+
+    // Helper function to detect mobile devices
+    const isMobileDevice = () => {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    };
+
+    // Handle camera permission check
+    const handleCameraPermission = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+            // Camera access granted
+            stream.getTracks().forEach(track => track.stop()); // Stop the stream
+            return true;
+        } catch (error) {
+            console.error('Camera permission denied:', error);
+            toast({
+                title: 'Camera Permission',
+                description: 'Please allow camera access to scan QR codes.',
+                variant: 'destructive',
+            });
+            return false;
+        }
+    };
+
+    // Handle QR button click with permission check
+    const handleQrButtonClick = async () => {
+        const hasPermission = await handleCameraPermission();
+        if (hasPermission) {
+            setShowQrDialog(true);
+        }
+    };
 
     useEffect(() => {
+        // Set back camera as default for mobile devices
+        if (isMobileDevice()) {
+            setFacingMode('environment');
+        }
+
         // Fetch customers for dropdown
         const fetchCustomers = async () => {
             try {
@@ -200,7 +239,7 @@ export default function LogVisitPage() {
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setShowQrDialog(true)}
+                            onClick={handleQrButtonClick}
                         >
                             <QrCode className="mr-2 h-4 w-4" />
                             Scan QR
@@ -285,6 +324,7 @@ export default function LogVisitPage() {
                     </form>
                 </CardContent>
             </Card>
+
             {/* QR Scanner Dialog */}
             <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
                 <DialogContent>
@@ -295,14 +335,36 @@ export default function LogVisitPage() {
                         <div style={{ width: 280, height: 280 }}>
                             <QrReader
                                 scanDelay={300}
-                                onError={() => toast({ title: 'QR Error', description: 'Camera error', variant: 'destructive' })}
+                                onError={(error) => {
+                                    console.error('QR Scanner error:', error);
+                                    toast({ 
+                                        title: 'QR Error', 
+                                        description: 'Camera error. Please check camera permissions.', 
+                                        variant: 'destructive' 
+                                    });
+                                }}
                                 onScan={handleQrScan}
                                 style={{ width: '100%', height: '100%' }}
+                                constraints={{
+                                    video: {
+                                        facingMode: facingMode,
+                                        width: { ideal: 1280 },
+                                        height: { ideal: 720 },
+                                    }
+                                }}
                             />
                         </div>
-                        <Button className="mt-4" variant="outline" onClick={() => setShowQrDialog(false)}>
-                            Cancel
-                        </Button>
+                        <div className="mt-4 flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => setFacingMode(facingMode === 'environment' ? 'user' : 'environment')}
+                            >
+                                {facingMode === 'environment' ? 'Front Camera' : 'Back Camera'}
+                            </Button>
+                            <Button variant="outline" onClick={() => setShowQrDialog(false)}>
+                                Cancel
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
