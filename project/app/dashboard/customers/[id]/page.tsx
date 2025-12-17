@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,8 @@ import { toast } from 'sonner';
 import Visit from '@/models/Visit'; // (for type only, not used directly)
 import Transaction from '@/models/Transaction'; // (for type only, not used directly)
 
-export default function CustomerPage({ params }: { params: { id: string } }) {
+export default function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
     const router = useRouter();
     const [customer, setCustomer] = useState<ICustomer | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +35,7 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
         const fetchCustomer = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch(`/api/customers/${params.id}`, {
+                const response = await fetch(`/api/customers/${id}`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
@@ -79,7 +80,7 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
             setLoadingVisits(true);
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch(`/api/visits?customerId=${params.id}`, {
+                const res = await fetch(`/api/visits?customerId=${id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const data = await res.json();
@@ -97,7 +98,7 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
             setLoadingRewards(true);
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch(`/api/transactions?customerId=${params.id}&type=REWARD_REDEEMED`, {
+                const res = await fetch(`/api/transactions?customerId=${id}&type=REWARD_REDEEMED`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const data = await res.json();
@@ -111,13 +112,13 @@ export default function CustomerPage({ params }: { params: { id: string } }) {
 
         fetchVisits();
         fetchRewards();
-    }, [params.id]);
+    }, [id]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`/api/customers/${params.id}`, {
+            const response = await fetch(`/api/customers/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

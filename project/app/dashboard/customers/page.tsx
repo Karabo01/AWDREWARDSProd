@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Label } from "@/components/ui/label";
 import {
@@ -26,7 +26,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
 
-export default function CustomersPage() {
+function CustomersContent() {
     const router = useRouter();
     const params = useSearchParams();
     const [customers, setCustomers] = useState<ICustomer[]>([]);
@@ -348,5 +348,24 @@ export default function CustomersPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function CustomersPage() {
+    return (
+        <Suspense fallback={
+            <div className="container mx-auto p-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Customers</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-center">Loading...</div>
+                    </CardContent>
+                </Card>
+            </div>
+        }>
+            <CustomersContent />
+        </Suspense>
     );
 }

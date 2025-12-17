@@ -5,8 +5,9 @@ import Customer from '@/models/Customer';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         await connectDB();
 
@@ -28,7 +29,7 @@ export async function GET(
         }
 
         const customer = await Customer.findOne({
-            _id: params.id,
+            _id: id,
             tenantId: tokenData.tenantId,
         });
 
@@ -51,8 +52,9 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         await connectDB();
 
@@ -86,7 +88,7 @@ export async function PUT(
 
         const customer = await Customer.findOneAndUpdate(
             {
-                _id: params.id,
+                _id: id,
                 tenantId: tokenData.tenantId,
             },
             { firstName, lastName, email, phone, address },

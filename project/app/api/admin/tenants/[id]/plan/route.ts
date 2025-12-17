@@ -4,13 +4,15 @@ import connectDB from '@/lib/mongodb';
 import Tenant from '@/models/Tenant';
 
 export async function PATCH(
-    request: NextRequest,
-    { params }: { params: { id: string } }
+    req: NextRequest,
+    ctx: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await ctx.params;
+
     try {
         await connectDB();
 
-        const authHeader = request.headers.get('authorization');
+        const authHeader = req.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
@@ -22,13 +24,13 @@ export async function PATCH(
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
-        const { subscriptionPlan } = await request.json();
+        const { subscriptionPlan } = await req.json();
         if (!['basic', 'premium', 'custom'].includes(subscriptionPlan)) {
             return NextResponse.json({ message: 'Invalid plan' }, { status: 400 });
         }
 
         const updatedTenant = await Tenant.findByIdAndUpdate(
-            params.id,
+            id,
             { subscriptionPlan },
             { new: true }
         );

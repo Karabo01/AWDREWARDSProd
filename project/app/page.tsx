@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Gift, Users, TrendingUp, Shield, Clock, Star } from 'lucide-react';
+import Image from 'next/image'; // added
 
 export default function HomePage() {
   return (
@@ -71,7 +72,13 @@ export default function HomePage() {
                 rel="noopener noreferrer"
                 className="inline-block"
               >
-                <img src="/google-play-badge.png.png" alt="Get it on Google Play" className="h-10" />
+                <Image
+                  src="/google-play-badge.png"
+                  alt="Get it on Google Play"
+                  width={300}
+                  height={90}
+                  priority
+                />
               </a>
               <a
                 href="https://apps.apple.com/app/id0000000000"
@@ -79,7 +86,13 @@ export default function HomePage() {
                 rel="noopener noreferrer"
                 className="inline-block"
               >
-                <img src="/apple-store-badge.png.svg" alt="Download on the App Store" className="h-10" />
+                <Image
+                  src="/app-store-badge.png"
+                  alt="Download on the App Store"
+                  width={300}
+                  height={90}
+                  priority
+                />
               </a>
             </div>
           </div>

@@ -5,8 +5,10 @@ import Tenant from '@/models/Tenant';
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    ctx: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await ctx.params;
+
     try {
         await connectDB();
 
@@ -25,7 +27,7 @@ export async function PATCH(
         const { isActive } = await request.json();
 
         const updatedTenant = await Tenant.findByIdAndUpdate(
-            params.id,
+            id,
             { isActive },
             { new: true }
         );

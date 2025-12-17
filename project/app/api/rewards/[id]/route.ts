@@ -3,7 +3,8 @@ import connectDB from '@/lib/mongodb';
 import Reward from '@/models/Reward';
 import { getTokenData } from '@/lib/auth';
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     try {
         await connectDB();
 
@@ -18,7 +19,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         }
 
         const reward = await Reward.findOneAndDelete({
-            _id: params.id,
+            _id: id,
             tenantId: tokenData.tenantId
         });
 

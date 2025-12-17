@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ function validatePassword(password: string) {
   return errors;
 }
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
     const router = useRouter();
     const params = useSearchParams();
     const [password, setPassword] = useState('');
@@ -90,51 +90,68 @@ export default function ResetPasswordPage() {
     };
 
     return (
+        <Card className="w-full max-w-md">
+            <CardHeader>
+                <CardTitle>Reset Password</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <Input
+                        type="password"
+                        placeholder="New password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        required
+                    />
+                    <Input
+                        type="password"
+                        placeholder="Confirm new password"
+                        value={confirm}
+                        onChange={e => setConfirm(e.target.value)}
+                        required
+                    />
+                    {errors.length > 0 && (
+                        <ul className="text-red-600 text-sm list-disc pl-5 space-y-1">
+                            {errors.map((err, i) => (
+                                <li key={i}>{err}</li>
+                            ))}
+                        </ul>
+                    )}
+                    <div className="text-xs text-gray-500">
+                        Password must contain:
+                        <ul className="list-disc pl-5">
+                            <li>At least 8 characters</li>
+                            <li>An uppercase letter</li>
+                            <li>A lowercase letter</li>
+                            <li>A number</li>
+                            <li>A special character</li>
+                            <li>Not be a common password</li>
+                        </ul>
+                    </div>
+                    <Button type="submit" disabled={loading}>
+                        {loading ? 'Resetting...' : 'Reset Password'}
+                    </Button>
+                </form>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function ResetPasswordPage() {
+    return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle>Reset Password</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <Input
-                            type="password"
-                            placeholder="New password"
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            required
-                        />
-                        <Input
-                            type="password"
-                            placeholder="Confirm new password"
-                            value={confirm}
-                            onChange={e => setConfirm(e.target.value)}
-                            required
-                        />
-                        {errors.length > 0 && (
-                            <ul className="text-red-600 text-sm list-disc pl-5 space-y-1">
-                                {errors.map((err, i) => (
-                                    <li key={i}>{err}</li>
-                                ))}
-                            </ul>
-                        )}
-                        <div className="text-xs text-gray-500">
-                            Password must contain:
-                            <ul className="list-disc pl-5">
-                                <li>At least 8 characters</li>
-                                <li>An uppercase letter</li>
-                                <li>A lowercase letter</li>
-                                <li>A number</li>
-                                <li>A special character</li>
-                                <li>Not be a common password</li>
-                            </ul>
-                        </div>
-                        <Button type="submit" disabled={loading}>
-                            {loading ? 'Resetting...' : 'Reset Password'}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
+            <Suspense fallback={
+                <Card className="w-full max-w-md">
+                    <CardHeader>
+                        <CardTitle>Reset Password</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-center">Loading...</div>
+                    </CardContent>
+                </Card>
+            }>
+                <ResetPasswordForm />
+            </Suspense>
         </div>
     );
 }

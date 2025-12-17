@@ -2,7 +2,7 @@
 const nextConfig = {
   // Remove or set output: 'standalone' instead of 'export'
   reactStrictMode: true,
-  swcMinify: true,
+  outputFileTracingRoot: __dirname,
 }
 
 module.exports = nextConfig

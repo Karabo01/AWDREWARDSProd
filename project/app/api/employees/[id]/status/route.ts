@@ -5,8 +5,9 @@ import User from '@/models/User';
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         await connectDB();
 
@@ -39,7 +40,7 @@ export async function PATCH(
 
         const user = await User.findOneAndUpdate(
             {
-                _id: params.id,
+                _id: id,
                 tenantId: tokenData.tenantId,
             },
             { isActive },
