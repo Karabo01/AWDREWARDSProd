@@ -73,7 +73,7 @@ export default function HomePage() {
                 className="inline-block"
               >
                 <Image
-                  src="/google-play-badge.png"
+                  src="/google-play-badge.png.png"
                   alt="Get it on Google Play"
                   width={300}
                   height={90}
