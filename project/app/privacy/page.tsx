@@ -31,7 +31,7 @@ export default function PrivacyPolicyPage() {
                         <section>
                             <h2 className="text-2xl font-semibold mb-3">1. Introduction</h2>
                             <p className="text-gray-700 leading-relaxed">
-                                Welcome to AWD Rewards ("we," "our," or "us"). We are committed to protecting your privacy 
+                                Welcome to AWD Rewards (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy 
                                 and ensuring the security of your personal information. This Privacy Policy explains how we 
                                 collect, use, disclose, and safeguard your information when you use our customer loyalty and 
                                 rewards management platform.
@@ -127,7 +127,7 @@ export default function PrivacyPolicyPage() {
 
                             <h3 className="text-xl font-semibold mb-2 mt-4">4.5 Multi-Tenant Architecture</h3>
                             <p className="text-gray-700 leading-relaxed">
-                                AWD Rewards operates on a multi-tenant architecture. Each business's data is logically separated 
+                                AWD Rewards operates on a multi-tenant architecture. Each business&apos;s data is logically separated 
                                 and secured. We do not share customer data between different business accounts.
                             </p>
                         </section>
@@ -202,7 +202,7 @@ export default function PrivacyPolicyPage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold mb-3">9. Children's Privacy</h2>
+                            <h2 className="text-2xl font-semibold mb-3">9. Children&apos;s Privacy</h2>
                             <p className="text-gray-700 leading-relaxed">
                                 AWD Rewards is not intended for use by children under the age of 13 (or the minimum age in 
                                 your jurisdiction). We do not knowingly collect personal information from children. If you 
@@ -235,7 +235,7 @@ export default function PrivacyPolicyPage() {
                             <p className="text-gray-700 leading-relaxed">
                                 We may update this Privacy Policy from time to time to reflect changes in our practices or 
                                 legal requirements. We will notify you of significant changes by posting the updated policy 
-                                on our website and updating the "Last Updated" date. Your continued use of our services after 
+                                on our website and updating the &quot;Last Updated&quot; date. Your continued use of our services after 
                                 such changes constitutes acceptance of the updated policy.
                             </p>
                         </section>
