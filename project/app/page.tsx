@@ -80,7 +80,7 @@ export default function HomePage() {
                   priority
                 />
               </a>
-              <a
+              {/* <a
                 href="https://apps.apple.com/app/id0000000000"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -93,7 +93,7 @@ export default function HomePage() {
                   height={90}
                   priority
                 />
-              </a>
+              </a> */}
             </div>
           </div>
           
@@ -274,7 +274,7 @@ export default function HomePage() {
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><Link href="/features" className="hover:text-white">Features</Link></li>
+               
                 <li><Link href="/pricing" className="hover:text-white">Pricing</Link></li>
                 <li><Link href="/demo" className="hover:text-white">Demo</Link></li>
               </ul>
@@ -282,17 +282,17 @@ export default function HomePage() {
             <div>
               <h3 className="font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><Link href="/help" className="hover:text-white">Help Center</Link></li>
+                
                 <li><Link href="/contact" className="hover:text-white">Contact</Link></li>
-                <li><Link href="/api-docs" className="hover:text-white">API Docs</Link></li>
+                
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><Link href="/about" className="hover:text-white">About</Link></li>
+                
                 <li><Link href="/privacy" className="hover:text-white">Privacy</Link></li>
-                <li><Link href="/terms" className="hover:text-white">Terms</Link></li>
+                
               </ul>
             </div>
           </div>
